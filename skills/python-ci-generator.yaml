@@ -1,0 +1,135 @@
+id: ao.devops/python-ci-generator
+description: "Generate GitHub Actions workflows for Python CI with pytest, coverage reporting, and 80% coverage threshold enforcement. Creates workflows that run tests, generate coverage reports, and enforce minimum coverage requirements."
+version: "0.1.0"
+
+agent: python-ci-agent
+
+environments:
+  - python
+
+workflow_types:
+  - ci
+
+features:
+  - pytest
+  - coverage
+  - coverage_threshold
+  - lint
+  - cache
+
+input_schema:
+  environment:
+    type: string
+    enum: [python]
+    description: Build environment/language
+    required: true
+    default: python
+  name:
+    type: string
+    description: Workflow name
+    required: true
+    default: Python CI
+  version:
+    type: string
+    description: Python version
+    default: "3.11"
+  package_manager:
+    type: string
+    enum: [pip, poetry, pipenv, pdm]
+    default: pip
+    description: Python package manager to use
+  coverage_threshold:
+    type: number
+    default: 80
+    description: Minimum coverage percentage threshold (0-100)
+  fail_under:
+    type: number
+    default: 80
+    description: Coverage threshold that causes job to fail if not met
+  lint:
+    type: boolean
+    default: true
+    description: Include linting step
+  linter:
+    type: string
+    enum: [ruff, pylint, flake8, black]
+    default: ruff
+    description: Linter to use
+  cache:
+    type: boolean
+    default: true
+    description: Enable dependency caching
+  cache_key:
+    type: string
+    default: pip
+    description: Cache key prefix (pip, poetry, pipenv, pdm)
+  pytest_args:
+    type: string
+    description: Additional pytest arguments
+    default: "-v --tb=short"
+  pytest_markers:
+    type: array
+    items:
+      type: string
+    description: Pytest markers to run (e.g., ["unit", "integration"])
+  test_path:
+    type: string
+    default: tests
+    description: Path to test directory
+  src_path:
+    type: string
+    default: src
+    description: Path to source code for coverage
+  matrix:
+    type: object
+    description: Matrix configuration for parallel builds
+
+capabilities:
+  python_generation: true
+  pytest_support: true
+  coverage_reporting: true
+  coverage_threshold_enforcement: true
+  caching: true
+  linting: true
+
+examples:
+  basic_pytest: |
+    input:
+      environment: python
+      name: Python CI
+      version: "3.11"
+      coverage_threshold: 80
+      fail_under: 80
+
+  poetry_with_lint: |
+    input:
+      environment: python
+      name: Python CI
+      version: "3.12"
+      package_manager: poetry
+      coverage_threshold: 80
+      fail_under: 80
+      lint: true
+      linter: ruff
+      cache: true
+
+  matrix_testing: |
+    input:
+      environment: python
+      name: Python CI
+      version: "3.10"
+      coverage_threshold: 80
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        os: [ubuntu-latest]
+
+  custom_paths: |
+    input:
+      environment: python
+      name: Tests
+      version: "3.11"
+      test_path: tests/unit
+      src_path: app
+      coverage_threshold: 85
+      fail_under: 85
+      pytest_args: "-v --tb=short -m unit"
