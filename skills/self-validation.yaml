@@ -1,0 +1,82 @@
+id: ao.devops/self-validation
+description: "GitHub Actions CI workflow that validates all generated DevOps configs in the skill pack. Validates schemas, checks for security issues, reports test coverage, and lints TypeScript/YAML files."
+version: "0.1.0"
+
+agent: integration-tester-agent
+
+triggers:
+  - push
+  - pull_request
+
+validation_types:
+  - yaml_schema
+  - json_schema
+  - toml_schema
+  - security_check
+  - test_coverage
+  - typescript_lint
+  - yaml_lint
+
+features:
+  - schema_validation
+  - security_scanning
+  - coverage_reporting
+  - linting
+  - concurrency_control
+  - artifact_upload
+
+input_schema:
+  validation_level:
+    type: string
+    enum: [strict, moderate, lenient]
+    default: moderate
+    description: Validation strictness level
+  run_coverage:
+    type: boolean
+    default: true
+    description: Run test coverage reporting
+  run_security:
+    type: boolean
+    default: true
+    description: Run security checks
+  run_lint:
+    type: boolean
+    default: true
+    description: Run TypeScript/YAML linting
+  fail_on_errors:
+    type: boolean
+    default: true
+    description: Fail workflow on validation errors
+
+capabilities:
+  schema_validation: true
+  security_scanning: true
+  coverage_reporting: true
+  yaml_linting: true
+  typescript_linting: true
+  ci_cd_validation: true
+
+examples:
+  basic_validation: |
+    input:
+      validation_level: moderate
+      run_coverage: true
+      run_security: true
+      run_lint: true
+      fail_on_errors: true
+
+  strict_validation: |
+    input:
+      validation_level: strict
+      run_coverage: true
+      run_security: true
+      run_lint: true
+      fail_on_errors: true
+
+  minimal_validation: |
+    input:
+      validation_level: lenient
+      run_coverage: false
+      run_security: true
+      run_lint: false
+      fail_on_errors: true

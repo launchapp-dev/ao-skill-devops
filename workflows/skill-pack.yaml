@@ -6,6 +6,13 @@ phases:
     capabilities:
       mutates_state: true
 
+  self-validate:
+    mode: agent
+    agent: integration-tester-agent
+    directive: "Run self-validation checks on the skill pack. Validate YAML/JSON/TOML schemas, check for security issues in configs, report test coverage, and verify TypeScript/YAML linting. Fail if any validation errors are found."
+    capabilities:
+      mutates_state: false
+
   vercel-config-generate:
     mode: agent
     agent: vercel-config-agent
@@ -904,3 +911,9 @@ workflows:
       - push-branch
       - create-pr
       - pr-review
+
+  - id: ao.devops/self-validation
+    name: "Skill Pack Self-Validation"
+    description: "GitHub Actions CI workflow that validates all generated DevOps configs in the skill pack. Runs schema validation, security checks, test coverage, and TypeScript/YAML linting. Triggers on PR and push events."
+    phases:
+      - self-validate
