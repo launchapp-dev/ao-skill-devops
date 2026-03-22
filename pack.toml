@@ -32,6 +32,8 @@ exports = [
   "ao.devops/docker-compose",
   "ao.devops/env-example",
   "ao.devops/env-example-with-tests",
+  "ao.devops/cli-generator",
+  "ao.devops/cli-generator-full",
 ]
 
 [skills]
@@ -48,6 +50,7 @@ exports = [
   "ao.devops/dockerfile-generator",
   "ao.devops/docker-compose-generator",
   "ao.devops/env-example-generator",
+  "ao.devops/cli-generator-interface",
 ]
 
 [runtime]
