@@ -1,0 +1,302 @@
+id: ao.devops/railway-config-tester
+description: "Unit tests for Railway config generator. Validates TOML syntax, Docker deployments, Nixpacks builds, monorepo services, health checks, and environment variables generation."
+version: "0.1.0"
+
+agent: integration-tester-agent
+
+capabilities:
+  toml_validation: true
+  docker_deployment_tests: true
+  nixpacks_build_tests: true
+  monorepo_service_tests: true
+  healthcheck_tests: true
+  environment_variable_tests: true
+  config_syntax_validation: true
+
+test_categories:
+  docker_deployments:
+    description: "Test Docker-based Railway deployments"
+    test_cases:
+      - basic_docker_build
+      - multi_stage_dockerfile
+      - docker_context_override
+      - dockerfile_path_validation
+      - docker_with_healthcheck
+      - docker_with_resources
+  nixpacks_builds:
+    description: "Test Nixpacks-based Railway deployments"
+    test_cases:
+      - nixpacks_nodejs
+      - nixpacks_python
+      - nixpacks_go
+      - nixpacks_rust
+      - nixpacks_custom_build
+      - nixpacks_language_detection
+  monorepo_services:
+    description: "Test monorepo/multi-service Railway deployments"
+    test_cases:
+      - multi_service_docker
+      - multi_service_nixpacks
+      - mixed_build_types
+      - service_dependencies
+      - monorepo_path_validation
+  health_checks:
+    description: "Test health check configurations"
+    test_cases:
+      - http_healthcheck
+      - tcp_healthcheck
+      - command_healthcheck
+      - healthcheck_timing_params
+      - healthcheck_retries
+      - healthcheck_disabled
+  environment_variables:
+    description: "Test environment variable configurations"
+    test_cases:
+      - static_env_vars
+      - secret_references
+      - mixed_env_and_secrets
+      - platform_variables
+      - env_var_validation
+
+input_schema:
+  test_type:
+    type: string
+    enum: [toml_validation, docker_deployments, nixpacks_builds, monorepo_services, health_checks, environment_variables, all]
+    description: Type of Railway config test to run
+    required: true
+  target_config:
+    type: string
+    description: Path to the generated railway.toml file to test
+    required: false
+  generated_config:
+    type: string
+    description: Raw railway.toml content to validate
+    required: false
+  test_scenario:
+    type: string
+    description: Specific test scenario or use case
+  deployment_type:
+    type: string
+    enum: [docker, nixpacks, buildpack, monorepo, static, all]
+    description: Deployment type to test
+  validation_level:
+    type: string
+    enum: [strict, moderate, lenient]
+    default: moderate
+    description: Validation strictness level
+
+test_scenarios:
+  docker_deployment:
+    deployment_type: docker
+    dockerfile_path: Dockerfile
+    docker_context: .
+    port: 8080
+    num_replicas: 2
+    healthcheck_path: /health
+    healthcheck_interval: 30
+    healthcheck_timeout: 5
+    healthcheck_retries: 3
+    environment_variables:
+      NODE_ENV: production
+      PORT: 8080
+    secret_variables:
+      - DATABASE_URL
+      - API_KEY
+    memory_limit: 512
+    cpu: 1
+
+  nixpacks_nodejs:
+    deployment_type: nixpacks
+    language: nodejs
+    build_command: npm run build
+    start_command: npm start
+    port: 3000
+    healthcheck_path: /health
+    environment_variables:
+      NODE_ENV: production
+    secret_variables:
+      - DATABASE_URL
+
+  nixpacks_python:
+    deployment_type: nixpacks
+    language: python
+    build_command: pip install -r requirements.txt
+    start_command: gunicorn app:app
+    port: 8000
+    healthcheck_path: /health
+    healthcheck_retries: 5
+    environment_variables:
+      FLASK_ENV: production
+    secret_variables:
+      - SECRET_KEY
+      - DATABASE_URL
+
+  monorepo_multi_service:
+    deployment_type: monorepo
+    services:
+      - name: api
+        path: ./services/api
+        deployment_type: docker
+        dockerfile_path: ./services/api/Dockerfile
+        port: 4000
+        healthcheck_path: /health
+      - name: worker
+        path: ./services/worker
+        deployment_type: nixpacks
+        language: nodejs
+        port: 4001
+      - name: web
+        path: ./apps/web
+        deployment_type: nixpacks
+        language: nodejs
+        port: 3000
+        healthcheck_path: /
+
+  healthcheck_http:
+    deployment_type: nixpacks
+    language: nodejs
+    port: 3000
+    healthcheck_path: /health
+    healthcheck_interval: 30
+    healthcheck_timeout: 5
+    healthcheck_retries: 3
+
+  healthcheck_tcp:
+    deployment_type: docker
+    dockerfile_path: Dockerfile
+    port: 5432
+    healthcheck_port: 5432
+    healthcheck_interval: 15
+
+  healthcheck_command:
+    deployment_type: docker
+    dockerfile_path: Dockerfile
+    healthcheck_command: /bin/check-health
+    healthcheck_interval: 60
+
+  env_static:
+    deployment_type: nixpacks
+    language: nodejs
+    environment_variables:
+      NODE_ENV: production
+      PORT: 3000
+      LOG_LEVEL: info
+      API_URL: https://api.example.com
+
+  env_with_secrets:
+    deployment_type: nixpacks
+    language: nodejs
+    environment_variables:
+      NODE_ENV: production
+    secret_variables:
+      - DATABASE_URL
+      - API_KEY
+      - STRIPE_SECRET
+      - JWT_SECRET
+
+  resource_limits:
+    deployment_type: nixpacks
+    language: nodejs
+    memory_limit: 512
+    cpu: 1
+    num_replicas: 3
+
+validation_rules:
+  toml_syntax:
+    - "TOML must be valid UTF-8"
+    - "All tables must be properly defined"
+    - "String values must be properly quoted"
+    - "Numbers must be valid integers or floats"
+    - "Arrays must have consistent types"
+  builder_types:
+    valid: [docker, nixpacks, buildpack]
+    description: "Valid Railway builder types"
+  port_range:
+    min: 1
+    max: 65535
+    description: "Valid port range"
+  resource_limits:
+    memory_min: 64
+    memory_max: 65536
+    cpu_min: 0.1
+    cpu_max: 16
+    description: "Railway resource limits"
+
+examples:
+  docker_config_test: |
+    input:
+      test_type: docker_deployments
+      test_scenario: docker_deployment
+      validation_level: strict
+
+  nixpacks_config_test: |
+    input:
+      test_type: nixpacks_builds
+      test_scenario: nixpacks_nodejs
+      validation_level: strict
+
+  monorepo_test: |
+    input:
+      test_type: monorepo_services
+      test_scenario: monorepo_multi_service
+      validation_level: strict
+
+  healthcheck_test: |
+    input:
+      test_type: health_checks
+      test_scenario: healthcheck_http
+      validation_level: strict
+
+  env_vars_test: |
+    input:
+      test_type: environment_variables
+      test_scenario: env_with_secrets
+      validation_level: strict
+
+  full_validation: |
+    input:
+      test_type: all
+      deployment_type: all
+      validation_level: moderate
+
+output_schema:
+  test_results:
+    type: object
+    properties:
+      passed: boolean
+      duration_ms: number
+      test_type: string
+      target_file: string
+      errors:
+        type: array
+        items:
+          type: object
+          properties:
+            message: string
+            line: number
+            column: number
+            severity: string
+            rule: string
+      warnings:
+        type: array
+        items:
+          type: object
+          properties:
+            message: string
+            line: number
+            column: number
+            severity: string
+            rule: string
+      recommendations:
+        type: array
+        items:
+          type: string
+      validation_details:
+        type: object
+        properties:
+          toml_valid: boolean
+          builder_valid: boolean
+          port_valid: boolean
+          healthcheck_valid: boolean
+          env_vars_valid: boolean
+          resources_valid: boolean

@@ -125,6 +125,36 @@ phases:
         type: string
         description: Path to nixpacks.toml config file
 
+  railway-config-test:
+    mode: agent
+    agent: integration-tester-agent
+    directive: "Run unit tests for Railway deployment configurations. Validates TOML syntax, Docker deployments, Nixpacks builds, monorepo services, health checks, and environment variables generation."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      test_type:
+        type: string
+        enum: [toml_validation, docker_deployments, nixpacks_builds, monorepo_services, health_checks, environment_variables, all]
+        description: Type of Railway config test to run
+      target_config:
+        type: string
+        description: Path to the generated railway.toml file to test
+      generated_config:
+        type: string
+        description: Raw railway.toml content to validate
+      test_scenario:
+        type: string
+        description: Specific test scenario or use case
+      deployment_type:
+        type: string
+        enum: [docker, nixpacks, buildpack, monorepo, static, all]
+        description: Deployment type to test
+      validation_level:
+        type: string
+        enum: [strict, moderate, lenient]
+        default: moderate
+        description: Validation strictness level
+
   dockerfile-generate:
     mode: agent
     agent: dockerfile-agent
@@ -544,7 +574,7 @@ workflows:
     description: "Generate Railway deployment configurations (railway.toml) for Docker containers, Nixpacks builds, and monorepo services"
     phases:
       - railway-config-generate
-      - integration-test
+      - railway-config-test
       - push-branch
       - create-pr
       - pr-review

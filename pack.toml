@@ -40,6 +40,7 @@ exports = [
   "ao.devops/vercel-config-generator",
   "ao.devops/vercel-config-generator-tests",
   "ao.devops/railway-config-generator",
+  "ao.devops/railway-config-tester",
   "ao.devops/dockerfile-generator",
   "ao.devops/docker-compose-generator",
 ]
