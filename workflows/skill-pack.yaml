@@ -521,19 +521,21 @@ phases:
 
   integration-test:
     mode: agent
-    agent: vercel-config-test-agent
-    directive: "Run unit tests for Vercel config generator. Validates vercel.json generation for static sites, serverless functions, edge functions, monorepos, route configurations, and environment variables."
+    agent: integration-tester-agent
+    directive: "Run end-to-end integration tests for generated DevOps configs. Validates Kubernetes YAML, tests GitHub Actions workflows, verifies Docker configs, and validates environment variable configurations work correctly."
     capabilities:
       mutates_state: false
     input_schema:
+      test_type:
+        type: string
+        enum: [cli, config, e2e]
+        description: Type of integration test to run
+      target_config:
+        type: string
+        description: Path to the generated config file to test
       test_scenario:
         type: string
-        enum: [static_sites, serverless_functions, edge_functions, monorepos, route_configurations, environment_variables, framework_presets, validation_tests, edge_cases, all]
-        default: all
-        description: Test scenario to run
-      test_case_id:
-        type: string
-        description: Specific test case ID to run (optional)
+        description: Specific test scenario or use case
       validation_level:
         type: string
         enum: [strict, moderate, lenient]

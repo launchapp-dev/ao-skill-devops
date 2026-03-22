@@ -1629,15 +1629,43 @@ agents:
          - SERVER_PORT
          - Logging levels
 
-      7. Docker
-         - Build arguments
-         - Runtime environment
-         - Service connections
+      7. Rust
+         - RUST_LOG: Logging level (trace, debug, info, warn, error)
+         - RUST_BACKTRACE: Enable backtraces
+         - DATABASE_URL: Database connection string
+         - SERVER_PORT: HTTP server port
+         - RUST_RELEASE: Release profile (dev, release)
+         - RUST_MIN_STACK: Minimum stack size
 
-      8. Kubernetes
-         - Container configuration
-         - Resource limits
-         - ConfigMap and Secret references
+      8. Deno
+         - DENO_ENV: Environment (development, production)
+         - DENO_DIR: Cache directory path
+         - DENO_NO_PACKAGE_JSON: Skip package.json detection
+         - DATABASE_URL: Database connection
+         - PORT: Server port (default 8000)
+         - TLS_KEY_PATH, TLS_CERT_PATH: SSL certificates
+
+      9. Bun
+         - NODE_ENV: development/production
+         - PORT: Server port
+         - DATABASE_URL: Database connection
+         - BUN_ENV: Bun-specific environment
+         - BUN_INSTALL_CACHE_DIR: Install cache directory
+
+      10. Docker
+          - Build arguments
+          - Runtime environment
+          - Service connections
+
+      11. Kubernetes
+          - Container configuration
+          - Resource limits
+          - ConfigMap and Secret references
+
+      12. Generic
+          - Custom environment variables
+          - Flexible key-value pairs
+          - No framework-specific defaults
 
       VARIABLE TYPES:
 

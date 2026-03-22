@@ -310,6 +310,17 @@ class TestEnvExampleGeneratorAgent:
         assert "framework" in prompt.lower() or "environment" in prompt.lower()
         assert "secret" in prompt.lower()
 
+    def test_agent_system_prompt_covers_all_environment_types(self):
+        """Test that env-example-generator-agent system prompt covers all 12 environment types."""
+        with open(os.path.join(PROJECT_ROOT, "runtime", "agents.yaml"), "r") as f:
+            agents_data = yaml.safe_load(f)
+        agent = agents_data["agents"]["env-example-generator-agent"]
+        prompt = agent["system_prompt"]
+        # All 12 environment types from the skill
+        expected_types = ["Node.js", "Python", "Go", "Ruby", "PHP", "Java", "Rust", "Deno", "Bun", "Docker", "Kubernetes", "Generic"]
+        for env_type in expected_types:
+            assert env_type in prompt, f"Agent prompt should document {env_type} environment type"
+
 
 class TestEnvExampleGeneratorWorkflows:
     """Tests for env-example-generator workflows in skill-pack.yaml."""
@@ -377,6 +388,20 @@ class TestEnvExampleGeneratorWorkflows:
         phases = workflow["phases"]
         assert "env-example-generate" in phases
         assert "integration-test" in phases
+
+    def test_integration_test_phase_uses_integration_tester_agent(self):
+        """Test that integration-test phase uses integration-tester-agent, not vercel-config-test-agent."""
+        with open(os.path.join(PROJECT_ROOT, "workflows", "skill-pack.yaml"), "r") as f:
+            workflows_data = yaml.safe_load(f)
+        phases = workflows_data["phases"]
+        assert "integration-test" in phases, "integration-test phase should exist"
+        phase = phases["integration-test"]
+        # Should use integration-tester-agent, not vercel-config-test-agent
+        assert phase["agent"] == "integration-tester-agent", \
+            f"integration-test phase should use integration-tester-agent, got: {phase['agent']}"
+        # Verify it's NOT using vercel-config-test-agent
+        assert phase["agent"] != "vercel-config-test-agent", \
+            "integration-test phase should not use vercel-config-test-agent"
 
 
 class TestPackManifest:
