@@ -34,6 +34,7 @@ exports = [
   "ao.devops/env-example-with-tests",
   "ao.devops/cli-generator",
   "ao.devops/cli-generator-full",
+  "ao.devops/self-validation",
 ]
 
 [skills]
@@ -51,6 +52,7 @@ exports = [
   "ao.devops/docker-compose-generator",
   "ao.devops/env-example-generator",
   "ao.devops/cli-generator-interface",
+  "ao.devops/self-validation",
 ]
 
 [runtime]
