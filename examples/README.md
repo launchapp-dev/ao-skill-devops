@@ -29,6 +29,25 @@ Each language/framework has a complete example with:
 - [Web Application Stack](multi-service/web-app/) - Frontend + Backend + Database
 - [E-commerce Platform](multi-service/ecommerce/) - Multiple microservices
 
+### Dockerfile Examples
+- [Multi-Stage Node.js](dockerfile/multi-stage-nodejs.md) - Production Node.js with layer caching and health checks
+- [Multi-Stage Python](dockerfile/multi-stage-python.md) - FastAPI with Gunicorn and security hardening
+- [Multi-Stage Go](dockerfile/multi-stage-go.md) - Static binary with minimal attack surface
+
+### Docker Compose Examples
+- [Web Application Stack](docker-compose/web-app-stack.md) - API with PostgreSQL and Redis
+- [Microservices Architecture](docker-compose/microservices.md) - Multi-service with isolated networks
+
+### Vercel Deployment Examples
+- [Static Site](vercel/static-site.md) - Static site with caching and security headers
+- [Next.js Application](vercel/nextjs-app.md) - Full-stack Next.js with serverless functions
+- [Serverless API](vercel/serverless-api.md) - Node.js API with rate limiting
+
+### Railway Deployment Examples
+- [Docker Deployment](railway/docker-deployment.md) - Docker-based deployment with health checks
+- [Nixpacks Node.js](railway/nixpacks-nodejs.md) - Auto-detected Node.js with Nixpacks
+- [Monorepo](railway/monorepo.md) - Multi-service monorepo architecture
+
 ## Usage
 
 Generate manifests using the `ao.devops/k8s-manifest-generator` skill:
