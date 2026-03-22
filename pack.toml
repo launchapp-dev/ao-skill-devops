@@ -22,6 +22,8 @@ exports = [
   "ao.devops/k8s-manifest",
   "ao.devops/standard-with-tests",
   "ao.devops/base-framework",
+  "ao.devops/vercel-config",
+  "ao.devops/railway-config",
 ]
 
 [skills]
@@ -29,6 +31,8 @@ exports = [
   "ao.devops/agent-base-framework",
   "ao.devops/k8s-manifest-generator",
   "ao.devops/integration-tester",
+  "ao.devops/vercel-config-generator",
+  "ao.devops/railway-config-generator",
 ]
 
 [runtime]

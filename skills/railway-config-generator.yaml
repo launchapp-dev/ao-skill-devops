@@ -1,0 +1,169 @@
+id: ao.devops/railway-config-generator
+description: "Generate Railway deployment configurations (railway.toml). Supports Docker containers, Nixpacks, build configurations, environment variables, health checks, and scaling. Handles monorepo and multi-service deployments."
+version: "0.1.0"
+
+agent: railway-config-agent
+
+deployment_types:
+  - docker
+  - nixpacks
+  - buildpack
+  - monorepo
+  - static
+
+language_presets:
+  - nodejs
+  - python
+  - go
+  - rust
+  - deno
+  - bun
+  - java
+  - ruby
+  - php
+  - other
+
+input_schema:
+  deployment_type:
+    type: string
+    enum: [docker, nixpacks, buildpack, monorepo, static]
+    description: Type of Railway deployment
+    required: true
+  language:
+    type: string
+    enum: [nodejs, python, go, rust, deno, bun, java, ruby, php, other]
+    default: other
+    description: Target language/runtime
+  dockerfile_path:
+    type: string
+    default: Dockerfile
+    description: Path to Dockerfile for Docker deployments
+  docker_context:
+    type: string
+    default: .
+    description: Docker build context
+  build_command:
+    type: string
+    description: Override build command
+  start_command:
+    type: string
+    description: Override start command
+  port:
+    type: integer
+    default: 3000
+    description: Container port to expose
+  num_replicas:
+    type: integer
+    default: 1
+    description: Number of replicas
+  healthcheck_path:
+    type: string
+    description: HTTP path for health checks
+  healthcheck_interval:
+    type: integer
+    default: 30
+    description: Health check interval in seconds
+  healthcheck_timeout:
+    type: integer
+    default: 5
+    description: Health check timeout in seconds
+  healthcheck_retries:
+    type: integer
+    default: 3
+    description: Health check retry count
+  environment_variables:
+    type: object
+    description: Static environment variables
+  secret_variables:
+    type: array
+    items:
+      type: string
+    description: Secret variable names (use ${{ secrets.VAR }})
+  memory_limit:
+    type: integer
+    description: Memory limit in MB
+  cpu:
+    type: number
+    description: CPU count
+  services:
+    type: array
+    description: Service definitions for monorepo deployments
+  nixpacks_config:
+    type: string
+    description: Path to nixpacks.toml config file
+
+capabilities:
+  railway_generation: true
+  docker_support: true
+  nixpacks_support: true
+  healthcheck_support: true
+  monorepo_support: true
+  autoscaling_support: true
+
+examples:
+  docker_deployment: |
+    input:
+      deployment_type: docker
+      dockerfile_path: Dockerfile
+      docker_context: .
+      port: 8080
+      num_replicas: 2
+      healthcheck_path: /health
+      environment_variables:
+        NODE_ENV: production
+        PORT: 8080
+      secret_variables:
+        - DATABASE_URL
+        - API_KEY
+      memory_limit: 512
+      cpu: 1
+
+  nixpacks_node: |
+    input:
+      deployment_type: nixpacks
+      language: nodejs
+      build_command: npm run build
+      start_command: npm start
+      port: 3000
+      healthcheck_path: /health
+      environment_variables:
+        NODE_ENV: production
+      secret_variables:
+        - DATABASE_URL
+
+  nixpacks_python: |
+    input:
+      deployment_type: nixpacks
+      language: python
+      build_command: pip install -r requirements.txt
+      start_command: gunicorn app:app
+      port: 8000
+      healthcheck_path: /health
+      healthcheck_retries: 5
+      environment_variables:
+        FLASK_ENV: production
+      secret_variables:
+        - SECRET_KEY
+        - DATABASE_URL
+
+  monorepo: |
+    input:
+      deployment_type: monorepo
+      services:
+        - name: api
+          path: ./services/api
+          deployment_type: docker
+          dockerfile_path: ./services/api/Dockerfile
+          port: 4000
+          healthcheck_path: /health
+        - name: worker
+          path: ./services/worker
+          deployment_type: nixpacks
+          language: nodejs
+          port: 4001
+        - name: web
+          path: ./apps/web
+          deployment_type: nixpacks
+          language: nodejs
+          port: 3000
+          healthcheck_path: /

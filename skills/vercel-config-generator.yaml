@@ -1,0 +1,118 @@
+id: ao.devops/vercel-config-generator
+description: "Generate Vercel deployment configurations (vercel.json). Supports serverless functions, edge functions, static sites, monorepos, and environment variables. Configures build commands, output directories, and region deployment."
+version: "0.1.0"
+
+agent: vercel-config-agent
+
+deployment_types:
+  - static
+  - serverless
+  - edge
+  - monorepo
+  - framework
+
+framework_presets:
+  - nextjs
+  - nuxt
+  - sveltekit
+  - astro
+  - remix
+  - expo
+  - nodejs
+  - other
+
+input_schema:
+  deployment_type:
+    type: string
+    enum: [static, serverless, edge, monorepo, framework]
+    description: Type of Vercel deployment
+    required: true
+  framework:
+    type: string
+    enum: [nextjs, nuxt, sveltekit, astro, remix, expo, nodejs, other]
+    default: other
+    description: Target framework for auto-configuration
+  build_command:
+    type: string
+    description: Build command to execute
+  output_directory:
+    type: string
+    description: Directory containing built files
+  install_command:
+    type: string
+    description: Install command for dependencies
+  regions:
+    type: array
+    items:
+      type: string
+    description: Deployment regions
+  environment_variables:
+    type: object
+    description: Static environment variables
+  secret_environment_variables:
+    type: array
+    items:
+      type: string
+    description: Secret environment variable names (use ${{ secrets.VAR }})
+  routes:
+    type: array
+    description: Route configurations (headers, redirects, rewrites)
+  functions:
+    type: object
+    description: Serverless function configurations
+
+capabilities:
+  vercel_generation: true
+  serverless_support: true
+  edge_functions_support: true
+  monorepo_support: true
+  route_configuration: true
+
+examples:
+  static_site: |
+    input:
+      deployment_type: static
+      build_command: npm run build
+      output_directory: dist
+      environment_variables:
+        NODE_ENV: production
+
+  serverless_api: |
+    input:
+      deployment_type: serverless
+      framework: nodejs
+      build_command: npm run build
+      functions:
+        api:
+          runtime: nodejs18.x
+          memory: 1024
+          maxDuration: 10
+      environment_variables:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  nextjs_app: |
+    input:
+      deployment_type: framework
+      framework: nextjs
+      regions:
+        -iad1
+        - sfo1
+      routes:
+        - src: /api/(.*)
+          dest: /api/$1
+        - src: /(.*)
+          dest: /$1
+          headers:
+            - x-custom-header: value
+
+  monorepo: |
+    input:
+      deployment_type: monorepo
+      regions:
+        -iad1
+      functions:
+        api:
+          memory: 512
+          maxDuration: 30
+      environment_variables:
+        NODE_ENV: production
