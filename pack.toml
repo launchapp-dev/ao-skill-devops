@@ -30,6 +30,8 @@ exports = [
   "ao.devops/railway-config",
   "ao.devops/dockerfile",
   "ao.devops/docker-compose",
+  "ao.devops/env-example",
+  "ao.devops/env-example-with-tests",
 ]
 
 [skills]
@@ -45,6 +47,7 @@ exports = [
   "ao.devops/railway-config-tester",
   "ao.devops/dockerfile-generator",
   "ao.devops/docker-compose-generator",
+  "ao.devops/env-example-generator",
 ]
 
 [runtime]

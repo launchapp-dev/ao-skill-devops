@@ -533,6 +533,111 @@ phases:
         default: moderate
         description: Validation strictness level
 
+  env-example-generate:
+    mode: agent
+    agent: env-example-generator-agent
+    directive: "Generate .env.example file based on the input specification. Creates comprehensive environment variable documentation with type hints, descriptions, secrets handling, and framework-specific presets."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      environment_type:
+        type: string
+        enum: [nodejs, python, go, deno, bun, ruby, php, java, rust, docker, kubernetes, generic]
+        default: generic
+        description: Target environment/framework type
+      project_name:
+        type: string
+        description: Project name for context and comments
+      variables:
+        type: array
+        description: List of environment variables to document
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Variable name (e.g., DATABASE_URL)
+              required: true
+            description:
+              type: string
+              description: Human-readable description of the variable
+            type:
+              type: string
+              enum: [string, number, boolean, url, path, email, port, secret, array]
+              default: string
+              description: Variable type for documentation hints
+            default_value:
+              type: string
+              description: Default value
+            required:
+              type: boolean
+              default: false
+              description: Whether the variable is required
+            secret:
+              type: boolean
+              default: false
+              description: Whether the variable contains sensitive data
+            example:
+              type: string
+              description: Example value for documentation
+            validation:
+              type: string
+              description: Validation hint or pattern
+            allowed_values:
+              type: array
+              items:
+                type: string
+              description: For enum-like variables, list allowed values
+      framework_presets:
+        type: object
+        description: Pre-configured environment variables for common frameworks
+        properties:
+          database:
+            type: boolean
+            default: false
+            description: Include database connection variables
+          cache:
+            type: boolean
+            default: false
+            description: Include cache connection variables
+          auth:
+            type: boolean
+            default: false
+            description: Include authentication variables
+          storage:
+            type: boolean
+            default: false
+            description: Include storage/S3 variables
+          email:
+            type: boolean
+            default: false
+            description: Include email service variables
+          monitoring:
+            type: boolean
+            default: false
+            description: Include monitoring/logging variables
+          queue:
+            type: boolean
+            default: false
+            description: Include message queue variables
+      split_secrets:
+        type: boolean
+        default: true
+        description: Separate secrets into a distinct section
+      include_validation:
+        type: boolean
+        default: true
+        description: Include validation hints and type annotations
+      include_comments:
+        type: boolean
+        default: true
+        description: Include descriptive comments
+      format:
+        type: string
+        enum: [env, json, yaml, toml]
+        default: env
+        description: Output format for the generated file
+
 workflows:
   - id: ao.devops/standard
     name: "ao-skill-devops Standard"
@@ -652,6 +757,25 @@ workflows:
     description: "Generate docker-compose.yml files for multi-service orchestration with networks, volumes, environment variables, and health checks"
     phases:
       - docker-compose-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/env-example
+    name: "Environment Example Generator"
+    description: "Generate comprehensive .env.example files with documented environment variables, type hints, descriptions, and proper secrets handling. Supports Node.js, Python, Go, and other frameworks."
+    phases:
+      - env-example-generate
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/env-example-with-tests
+    name: "Environment Example Generator with Tests"
+    description: "Generate .env.example files and run validation tests to ensure proper format and documentation"
+    phases:
+      - env-example-generate
       - integration-test
       - push-branch
       - create-pr
