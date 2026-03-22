@@ -1023,6 +1023,344 @@ def integration_test_input(request) -> Dict[str, Any]:
     return INTEGRATION_TESTER_INPUTS[request.param]
 
 
+# -----------------------------------------------------------------------------
+# Env Example Generator Fixtures
+# -----------------------------------------------------------------------------
+
+ENV_EXAMPLE_BASIC = {
+    "project_name": "my-api",
+    "environment_type": "generic",
+    "variables": [
+        {"name": "NODE_ENV", "description": "Application environment", "type": "string", "default_value": "development", "required": True, "allowed_values": ["development", "staging", "production"]},
+        {"name": "DATABASE_URL", "description": "PostgreSQL database connection string", "type": "url", "required": True, "secret": True},
+        {"name": "PORT", "description": "Server port number", "type": "port", "default_value": "3000"},
+    ],
+    "split_secrets": True,
+    "include_comments": True,
+    "include_validation": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_NODEJS = {
+    "environment_type": "nodejs",
+    "project_name": "express-api",
+    "framework_presets": {
+        "database": True,
+        "auth": True,
+        "monitoring": True,
+    },
+    "variables": [
+        {"name": "NODE_ENV", "type": "string", "allowed_values": ["development", "staging", "production"]},
+        {"name": "PORT", "type": "port", "default_value": "3000"},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_PYTHON = {
+    "environment_type": "python",
+    "project_name": "flask-api",
+    "framework_presets": {
+        "database": True,
+        "cache": True,
+        "email": True,
+    },
+    "variables": [
+        {"name": "FLASK_ENV", "type": "string", "default_value": "development", "allowed_values": ["development", "production"]},
+        {"name": "SECRET_KEY", "type": "secret", "description": "Flask secret key for sessions"},
+        {"name": "DATABASE_URL", "type": "string", "description": "SQLAlchemy database URL", "secret": True},
+    ],
+    "split_secrets": True,
+    "include_validation": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_GO = {
+    "environment_type": "go",
+    "project_name": "go-api",
+    "framework_presets": {
+        "database": True,
+        "auth": True,
+    },
+    "variables": [
+        {"name": "GOPROXY", "type": "string", "description": "Go module proxy"},
+        {"name": "GOCACHE", "type": "path", "description": "Go build cache directory"},
+        {"name": "SERVER_PORT", "type": "port", "default_value": "8080"},
+        {"name": "DATABASE_URL", "type": "url", "required": True, "secret": True},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_RUBY = {
+    "environment_type": "ruby",
+    "project_name": "rails-app",
+    "framework_presets": {
+        "database": True,
+        "cache": True,
+        "auth": True,
+    },
+    "variables": [
+        {"name": "RAILS_ENV", "type": "string", "default_value": "development", "allowed_values": ["development", "test", "production"]},
+        {"name": "SECRET_KEY_BASE", "type": "secret", "description": "Rails secret key base"},
+        {"name": "DATABASE_URL", "type": "url", "required": True, "secret": True},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_PHP = {
+    "environment_type": "php",
+    "project_name": "laravel-app",
+    "framework_presets": {
+        "database": True,
+        "cache": True,
+    },
+    "variables": [
+        {"name": "APP_ENV", "type": "string", "default_value": "local", "allowed_values": ["local", "production"]},
+        {"name": "APP_DEBUG", "type": "boolean", "description": "Enable debug mode"},
+        {"name": "DB_CONNECTION", "type": "string", "default_value": "mysql"},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_JAVA = {
+    "environment_type": "java",
+    "project_name": "spring-boot-app",
+    "framework_presets": {
+        "database": True,
+        "monitoring": True,
+    },
+    "variables": [
+        {"name": "SPRING_PROFILES_ACTIVE", "type": "string", "default_value": "dev", "allowed_values": ["dev", "test", "prod"]},
+        {"name": "SERVER_PORT", "type": "port", "default_value": "8080"},
+        {"name": "DATABASE_URL", "type": "string", "description": "JDBC database URL", "secret": True},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_RUST = {
+    "environment_type": "rust",
+    "project_name": "rust-service",
+    "framework_presets": {
+        "database": True,
+    },
+    "variables": [
+        {"name": "RUST_LOG", "type": "string", "default_value": "info", "description": "Logging level"},
+        {"name": "DATABASE_URL", "type": "string", "description": "Database connection string", "secret": True},
+        {"name": "SERVER_PORT", "type": "port", "default_value": "8080"},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_DOCKER = {
+    "environment_type": "docker",
+    "project_name": "dockerized-app",
+    "variables": [
+        {"name": "BUILD_DATE", "type": "string", "description": "Container build date"},
+        {"name": "SOURCE_COMMIT", "type": "string", "description": "Git commit hash"},
+        {"name": "VERSION", "type": "string", "default_value": "latest"},
+    ],
+    "include_comments": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_KUBERNETES = {
+    "environment_type": "kubernetes",
+    "project_name": "k8s-app",
+    "framework_presets": {
+        "database": True,
+        "monitoring": True,
+    },
+    "variables": [
+        {"name": "POD_NAME", "type": "string", "description": "Pod name (injected by K8s)"},
+        {"name": "NAMESPACE", "type": "string", "description": "Kubernetes namespace"},
+        {"name": "KUBERNETES_SERVICE_HOST", "type": "string", "description": "K8s API server host"},
+        {"name": "DATABASE_URL", "type": "string", "secret": True},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_DENO = {
+    "environment_type": "deno",
+    "project_name": "deno-api",
+    "framework_presets": {
+        "database": True,
+    },
+    "variables": [
+        {"name": "DENO_ENV", "type": "string", "default_value": "development", "allowed_values": ["development", "production"]},
+        {"name": "PORT", "type": "port", "default_value": "8000"},
+        {"name": "DATABASE_URL", "type": "string", "secret": True},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_BUN = {
+    "environment_type": "bun",
+    "project_name": "bun-api",
+    "framework_presets": {
+        "database": True,
+        "auth": True,
+    },
+    "variables": [
+        {"name": "NODE_ENV", "type": "string", "default_value": "development", "allowed_values": ["development", "production"]},
+        {"name": "PORT", "type": "port", "default_value": "3000"},
+        {"name": "DATABASE_URL", "type": "string", "secret": True},
+        {"name": "JWT_SECRET", "type": "secret", "description": "JWT signing secret"},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_FULLSTACK = {
+    "project_name": "fullstack-app",
+    "framework_presets": {
+        "database": True,
+        "cache": True,
+        "auth": True,
+        "storage": True,
+        "email": True,
+        "monitoring": True,
+        "queue": True,
+    },
+    "variables": [
+        {"name": "NODE_ENV", "type": "string", "allowed_values": ["development", "staging", "production"]},
+        {"name": "DATABASE_URL", "type": "url", "secret": True},
+        {"name": "REDIS_URL", "type": "url", "secret": True},
+        {"name": "JWT_SECRET", "type": "secret", "description": "Secret key for JWT signing"},
+        {"name": "AWS_ACCESS_KEY_ID", "type": "string", "secret": True},
+        {"name": "AWS_SECRET_ACCESS_KEY", "type": "secret"},
+        {"name": "AWS_S3_BUCKET", "type": "string"},
+        {"name": "SENDGRID_API_KEY", "type": "secret"},
+        {"name": "DATADOG_API_KEY", "type": "secret"},
+        {"name": "RABBITMQ_URL", "type": "url", "secret": True},
+    ],
+    "split_secrets": True,
+    "format": "env"
+}
+
+ENV_EXAMPLE_JSON_FORMAT = {
+    "project_name": "config-api",
+    "format": "json",
+    "variables": [
+        {"name": "APP_NAME", "type": "string", "default_value": "myapp"},
+        {"name": "DEBUG", "type": "boolean", "default_value": "false"},
+        {"name": "MAX_CONNECTIONS", "type": "number", "default_value": "100"},
+    ]
+}
+
+ENV_EXAMPLE_YAML_FORMAT = {
+    "project_name": "config-api",
+    "format": "yaml",
+    "variables": [
+        {"name": "APP_NAME", "type": "string", "default_value": "myapp"},
+        {"name": "DEBUG", "type": "boolean", "default_value": "false"},
+        {"name": "MAX_CONNECTIONS", "type": "number", "default_value": "100"},
+    ]
+}
+
+ENV_EXAMPLE_TOML_FORMAT = {
+    "project_name": "config-api",
+    "format": "toml",
+    "variables": [
+        {"name": "APP_NAME", "type": "string", "default_value": "myapp"},
+        {"name": "DEBUG", "type": "boolean", "default_value": "false"},
+    ]
+}
+
+ENV_EXAMPLE_NO_SPLIT = {
+    "project_name": "simple-app",
+    "split_secrets": False,
+    "format": "env",
+    "variables": [
+        {"name": "NODE_ENV", "type": "string", "default_value": "development"},
+        {"name": "DATABASE_URL", "type": "url", "secret": True},
+        {"name": "API_KEY", "type": "secret"},
+    ]
+}
+
+ENV_EXAMPLE_NO_COMMENTS = {
+    "project_name": "minimal-app",
+    "include_comments": False,
+    "format": "env",
+    "variables": [
+        {"name": "NODE_ENV", "type": "string", "default_value": "development"},
+        {"name": "PORT", "type": "port", "default_value": "3000"},
+    ]
+}
+
+ENV_EXAMPLE_VALIDATION = {
+    "project_name": "validated-app",
+    "include_validation": True,
+    "format": "env",
+    "variables": [
+        {"name": "PORT", "type": "port", "validation": "range:1-65535"},
+        {"name": "EMAIL", "type": "email", "validation": "regex:^[^@]+@[^@]+$"},
+        {"name": "ALLOWED_HOSTS", "type": "array", "description": "Comma-separated allowed hosts"},
+    ]
+}
+
+ENV_EXAMPLE_GENERATOR_INPUTS = {
+    "basic": ENV_EXAMPLE_BASIC,
+    "nodejs": ENV_EXAMPLE_NODEJS,
+    "python": ENV_EXAMPLE_PYTHON,
+    "go": ENV_EXAMPLE_GO,
+    "ruby": ENV_EXAMPLE_RUBY,
+    "php": ENV_EXAMPLE_PHP,
+    "java": ENV_EXAMPLE_JAVA,
+    "rust": ENV_EXAMPLE_RUST,
+    "docker": ENV_EXAMPLE_DOCKER,
+    "kubernetes": ENV_EXAMPLE_KUBERNETES,
+    "deno": ENV_EXAMPLE_DENO,
+    "bun": ENV_EXAMPLE_BUN,
+    "fullstack": ENV_EXAMPLE_FULLSTACK,
+    "json_format": ENV_EXAMPLE_JSON_FORMAT,
+    "yaml_format": ENV_EXAMPLE_YAML_FORMAT,
+    "toml_format": ENV_EXAMPLE_TOML_FORMAT,
+    "no_split": ENV_EXAMPLE_NO_SPLIT,
+    "no_comments": ENV_EXAMPLE_NO_COMMENTS,
+    "validation": ENV_EXAMPLE_VALIDATION,
+}
+
+# Add env_example to ALL_GENERATOR_INPUTS now that it's defined
+ALL_GENERATOR_INPUTS["env_example"] = ENV_EXAMPLE_GENERATOR_INPUTS
+
+
+@pytest.fixture(params=list(ENV_EXAMPLE_GENERATOR_INPUTS.keys()))
+def env_example_input(request) -> Dict[str, Any]:
+    """Parametrized fixture providing all env-example generator inputs."""
+    return ENV_EXAMPLE_GENERATOR_INPUTS[request.param].copy()
+
+
+@pytest.fixture
+def env_example_nodejs_input() -> Dict[str, Any]:
+    """Provide Node.js env-example input."""
+    return ENV_EXAMPLE_NODEJS.copy()
+
+
+@pytest.fixture
+def env_example_python_input() -> Dict[str, Any]:
+    """Provide Python env-example input."""
+    return ENV_EXAMPLE_PYTHON.copy()
+
+
+@pytest.fixture
+def env_example_fullstack_input() -> Dict[str, Any]:
+    """Provide fullstack env-example input."""
+    return ENV_EXAMPLE_FULLSTACK.copy()
+
+
+@pytest.fixture
+def env_example_basic_input() -> Dict[str, Any]:
+    """Provide basic env-example input."""
+    return ENV_EXAMPLE_BASIC.copy()
+
+
 # =============================================================================
 # Test Utilities
 # =============================================================================
@@ -1138,6 +1476,43 @@ def validate_railway_config(content: str) -> bool:
     return True
 
 
+def validate_env_example(content: str, format_type: str = "env") -> bool:
+    """Validate env example file structure.
+
+    Args:
+        content: The content of the .env.example file
+        format_type: The format of the file (env, json, yaml, toml)
+
+    Returns:
+        True if the content is valid, False otherwise
+    """
+    if format_type == "env":
+        # Basic env file validation
+        lines = content.strip().split("\n")
+        for line in lines:
+            line = line.strip()
+            # Skip empty lines and comments
+            if not line or line.startswith("#"):
+                continue
+            # Check for valid KEY=VALUE format
+            if "=" not in line:
+                return False
+            # Key should be uppercase with underscores
+            key = line.split("=", 1)[0].strip()
+            if not key.isupper() and not all(c.isupper() or c == "_" or c.isdigit() for c in key):
+                # Allow mixed case keys as they might be valid
+                pass
+        return True
+    elif format_type == "json":
+        return validate_json_syntax(content)
+    elif format_type == "yaml":
+        return validate_yaml_syntax(content)
+    elif format_type == "toml":
+        # Basic TOML validation - check for sections
+        return "[" in content and "]" in content
+    return False
+
+
 class MockGitHubAPI:
     """Mock GitHub API for testing."""
     
@@ -1220,6 +1595,7 @@ def assert_valid_output_format(content: str, format_type: str) -> None:
         "docker_compose": validate_docker_compose,
         "vercel": validate_vercel_config,
         "railway": validate_railway_config,
+        "env_example": lambda c: validate_env_example(c, "env"),
     }
     validator = validators.get(format_type)
     if validator:
@@ -1263,6 +1639,7 @@ __all__ = [
     "VERCEL_CONFIG_GENERATOR_INPUTS",
     "RAILWAY_CONFIG_GENERATOR_INPUTS",
     "INTEGRATION_TESTER_INPUTS",
+    "ENV_EXAMPLE_GENERATOR_INPUTS",
     "ALL_GENERATOR_INPUTS",
     # Validation utilities
     "validate_yaml_syntax",
