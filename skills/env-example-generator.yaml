@@ -1,0 +1,244 @@
+id: ao.devops/env-example-generator
+description: "Generate comprehensive .env.example files with documented environment variables, type hints, and descriptions. Handles secrets vs public variables, supports Node.js, Python, and other frameworks."
+version: "0.1.0"
+
+agent: env-example-generator-agent
+
+environment_types:
+  - nodejs
+  - python
+  - go
+  - deno
+  - bun
+  - ruby
+  - php
+  - java
+  - rust
+  - docker
+  - kubernetes
+  - generic
+
+features:
+  - type_hints
+  - descriptions
+  - secrets_identification
+  - public_private_split
+  - framework_presets
+  - default_values
+  - validation_hints
+  - multi_framework_support
+
+input_schema:
+  environment_type:
+    type: string
+    enum: [nodejs, python, go, deno, bun, ruby, php, java, rust, docker, kubernetes, generic]
+    default: generic
+    description: Target environment/framework type
+  project_name:
+    type: string
+    description: Project name for context and comments
+  variables:
+    type: array
+    description: List of environment variables to document
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Variable name (e.g., DATABASE_URL)
+          required: true
+        description:
+          type: string
+          description: Human-readable description of the variable
+        type:
+          type: string
+          enum: [string, number, boolean, url, path, email, port, secret, array]
+          default: string
+          description: Variable type for documentation hints
+        default_value:
+          type: string
+          description: Default value (use empty string or placeholder for secrets)
+        required:
+          type: boolean
+          default: false
+          description: Whether the variable is required
+        secret:
+          type: boolean
+          default: false
+          description: Whether the variable contains sensitive data
+        example:
+          type: string
+          description: Example value for documentation
+        validation:
+          type: string
+          description: Validation hint or pattern (e.g., "regex:^[a-z]+$")
+        allowed_values:
+          type: array
+          items:
+            type: string
+          description: For enum-like variables, list allowed values
+  framework_presets:
+    type: object
+    description: Pre-configured environment variables for common frameworks
+    properties:
+      database:
+        type: boolean
+        default: false
+        description: Include database connection variables
+      cache:
+        type: boolean
+        default: false
+        description: Include cache connection variables
+      auth:
+        type: boolean
+        default: false
+        description: Include authentication variables
+      storage:
+        type: boolean
+        default: false
+        description: Include storage/S3 variables
+      email:
+        type: boolean
+        default: false
+        description: Include email service variables
+      monitoring:
+        type: boolean
+        default: false
+        description: Include monitoring/logging variables
+      queue:
+        type: boolean
+        default: false
+        description: Include message queue variables
+  split_secrets:
+    type: boolean
+    default: true
+    description: Separate secrets into a distinct section
+  include_validation:
+    type: boolean
+    default: true
+    description: Include validation hints and type annotations
+  include_comments:
+    type: boolean
+    default: true
+    description: Include descriptive comments
+  format:
+    type: string
+    enum: [env, json, yaml, toml]
+    default: env
+    description: Output format for the generated file
+  options:
+    type: object
+    description: Additional generation options
+
+capabilities:
+  env_example_generation: true
+  secrets_handling: true
+  framework_detection: true
+  multi_format_output: true
+  variable_validation: true
+  documentation_generation: true
+
+examples:
+  basic: |
+    input:
+      project_name: my-app
+      variables:
+        - name: NODE_ENV
+          description: Application environment
+          type: string
+          default_value: development
+          required: true
+          allowed_values: [development, staging, production]
+        - name: DATABASE_URL
+          description: PostgreSQL database connection string
+          type: url
+          required: true
+          secret: true
+        - name: API_KEY
+          description: External API authentication key
+          type: secret
+          required: true
+        - name: PORT
+          description: Server port number
+          type: port
+          default_value: "3000"
+
+  nodejs_preset: |
+    input:
+      environment_type: nodejs
+      project_name: express-api
+      framework_presets:
+        database: true
+        auth: true
+        monitoring: true
+      variables:
+        - name: NODE_ENV
+          type: string
+          allowed_values: [development, staging, production]
+        - name: PORT
+          type: port
+          default_value: "3000"
+      split_secrets: true
+
+  python_preset: |
+    input:
+      environment_type: python
+      project_name: flask-api
+      framework_presets:
+        database: true
+        cache: true
+        email: true
+      variables:
+        - name: FLASK_ENV
+          type: string
+          default_value: development
+          allowed_values: [development, production]
+        - name: SECRET_KEY
+          type: secret
+          description: Flask secret key for sessions
+        - name: DATABASE_URL
+          type: string
+          description: SQLAlchemy database URL
+          secret: true
+      split_secrets: true
+      include_validation: true
+
+  fullstack: |
+    input:
+      project_name: fullstack-app
+      framework_presets:
+        database: true
+        cache: true
+        auth: true
+        storage: true
+        email: true
+        monitoring: true
+        queue: true
+      variables:
+        - name: NODE_ENV
+          type: string
+          allowed_values: [development, staging, production]
+        - name: DATABASE_URL
+          type: url
+          secret: true
+        - name: REDIS_URL
+          type: url
+          secret: true
+        - name: JWT_SECRET
+          type: secret
+          description: Secret key for JWT signing
+        - name: AWS_ACCESS_KEY_ID
+          type: string
+          secret: true
+        - name: AWS_SECRET_ACCESS_KEY
+          type: secret
+        - name: AWS_S3_BUCKET
+          type: string
+        - name: SENDGRID_API_KEY
+          type: secret
+        - name: DATADOG_API_KEY
+          type: secret
+        - name: RABBITMQ_URL
+          type: url
+          secret: true
+      split_secrets: true
