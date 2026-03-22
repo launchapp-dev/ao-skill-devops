@@ -205,6 +205,120 @@ phases:
         type: object
         description: Additional generation options
 
+  docker-compose-generate:
+    mode: agent
+    agent: docker-compose-agent
+    directive: "Generate docker-compose.yml based on the input specification. Creates multi-service orchestration with networks, volumes, environment variables, and health checks."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      compose_version:
+        type: string
+        default: "3.8"
+        description: Docker Compose file version
+      services:
+        type: array
+        description: List of services to define
+        required: true
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Service name
+              required: true
+            image:
+              type: string
+              description: Docker image to use
+            build:
+              type: object
+              description: Build configuration
+            ports:
+              type: array
+              items:
+                type: string
+              description: Port mappings
+            environment:
+              type: object
+              description: Environment variables
+            env_file:
+              type: string
+              description: Path to environment file
+            volumes:
+              type: array
+              items:
+                type: string
+              description: Volume mounts
+            networks:
+              type: array
+              items:
+                type: string
+              description: Network names
+            depends_on:
+              type: array
+              items:
+                type: string
+              description: Service dependencies
+            healthcheck:
+              type: object
+              description: Health check configuration
+            restart:
+              type: string
+              default: "unless-stopped"
+              enum: ["no", "always", "on-failure", "unless-stopped"]
+            command:
+              type: string
+              description: Override default command
+            logging:
+              type: object
+              description: Logging configuration
+      networks:
+        type: array
+        description: Network definitions
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              required: true
+            driver:
+              type: string
+              default: "bridge"
+      volumes:
+        type: array
+        description: Volume definitions
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              required: true
+            driver:
+              type: string
+              default: "local"
+      secrets:
+        type: array
+        description: Secret definitions
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              required: true
+            file:
+              type: string
+      configs:
+        type: array
+        description: Config definitions
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              required: true
+            file:
+              type: string
+
   agent-base-framework-generate:
     mode: agent
     agent: agent-base-framework-agent
@@ -400,6 +514,17 @@ workflows:
     description: "Generate production-ready multi-stage Dockerfiles with optimized layer caching, health checks, and security best practices"
     phases:
       - dockerfile-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+
+  - id: ao.devops/docker-compose
+    name: "Docker Compose Generator"
+    description: "Generate docker-compose.yml files for multi-service orchestration with networks, volumes, environment variables, and health checks"
+    phases:
+      - docker-compose-generate
       - integration-test
       - push-branch
       - create-pr
