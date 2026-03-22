@@ -1,0 +1,127 @@
+id: ao.devops/github-actions-generator
+description: "Generate GitHub Actions workflows for CI/CD pipelines. Supports Node.js, Python, and Go build environments with lint, test, build steps, caching, artifact handling, and matrix builds."
+version: "0.1.0"
+
+agent: github-actions-agent
+
+environments:
+  - nodejs
+  - python
+  - go
+
+workflow_types:
+  - ci
+  - cd
+  - ci-cd
+
+features:
+  - lint
+  - test
+  - build
+  - cache
+  - artifacts
+  - matrix_builds
+  - docker_build_push
+  - deploy
+
+input_schema:
+  environment:
+    type: string
+    enum: [nodejs, python, go]
+    description: Build environment/language
+    required: true
+  workflow_type:
+    type: string
+    enum: [ci, cd, ci-cd]
+    description: Type of workflow to generate
+    default: ci
+  name:
+    type: string
+    description: Workflow name
+    required: true
+  version:
+    type: string
+    description: Version or branch patterns
+    default: main
+  language_version:
+    type: string
+    description: Specific language version (e.g., "20.x", "3.11", "1.21")
+  steps:
+    type: array
+    description: Pipeline steps to include
+    items:
+      type: string
+      enum: [lint, test, build, docker, deploy]
+  cache:
+    type: boolean
+    default: true
+    description: Enable dependency caching
+  matrix:
+    type: object
+    description: Matrix configuration for parallel builds
+  artifact:
+    type: object
+    description: Artifact configuration for uploads/downloads
+  docker:
+    type: object
+    description: Docker build and push configuration
+  options:
+    type: object
+    description: Additional generation options
+
+capabilities:
+  nodejs_generation: true
+  python_generation: true
+  go_generation: true
+  caching: true
+  artifact_handling: true
+  matrix_builds: true
+  docker_support: true
+
+examples:
+  nodejs_ci: |
+    input:
+      environment: nodejs
+      workflow_type: ci
+      name: Node.js CI
+      language_version: "20.x"
+      steps:
+        - lint
+        - test
+        - build
+      cache: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node-version: ["18.x", "20.x"]
+
+  python_cicd: |
+    input:
+      environment: python
+      workflow_type: ci-cd
+      name: Python CI/CD
+      language_version: "3.11"
+      steps:
+        - lint
+        - test
+        - build
+        - docker
+        - deploy
+      cache: true
+      docker:
+        image_name: myregistry/myapp
+        dockerfile: ./Dockerfile
+
+  go_cd: |
+    input:
+      environment: go
+      workflow_type: cd
+      name: Go CD Pipeline
+      language_version: "1.21"
+      steps:
+        - test
+        - build
+        - docker
+      cache: true
+      artifact:
+        name: binary
+        path: ./dist

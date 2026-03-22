@@ -31,6 +31,51 @@ phases:
         type: object
         description: Additional generation options
 
+  github-actions-generate:
+    mode: agent
+    agent: github-actions-agent
+    directive: "Generate GitHub Actions workflow YAML based on input specification. Supports Node.js, Python, and Go environments with lint/test/build steps, caching, artifacts, matrix builds, and Docker support."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      environment:
+        type: string
+        enum: [nodejs, python, go]
+        description: Build environment/language
+        required: true
+      workflow_type:
+        type: string
+        enum: [ci, cd, ci-cd]
+        description: Type of workflow to generate
+        default: ci
+      name:
+        type: string
+        description: Workflow name
+        required: true
+      version:
+        type: string
+        description: Version or branch patterns
+        default: main
+      language_version:
+        type: string
+        description: Specific language version
+      steps:
+        type: array
+        description: Pipeline steps to include
+      cache:
+        type: boolean
+        default: true
+        description: Enable dependency caching
+      matrix:
+        type: object
+        description: Matrix configuration for parallel builds
+      artifact:
+        type: object
+        description: Artifact configuration
+      docker:
+        type: object
+        description: Docker build and push configuration
+
   integration-test:
     mode: agent
     agent: integration-tester-agent
@@ -91,6 +136,16 @@ workflows:
     description: "Plan → Implement → Integration Test → Push → PR"
     phases:
       - ao.devops-implement
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/github-actions
+    name: "GitHub Actions Generator"
+    description: "Generate GitHub Actions workflows for CI/CD pipelines. Supports Node.js, Python, and Go with lint/test/build steps, caching, artifacts, and matrix builds."
+    phases:
+      - github-actions-generate
       - integration-test
       - push-branch
       - create-pr

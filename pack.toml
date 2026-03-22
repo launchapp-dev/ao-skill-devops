@@ -21,12 +21,14 @@ exports = [
   "ao.devops/quick-fix",
   "ao.devops/k8s-manifest",
   "ao.devops/standard-with-tests",
+  "ao.devops/github-actions",
 ]
 
 [skills]
 exports = [
   "ao.devops/k8s-manifest-generator",
   "ao.devops/integration-tester",
+  "ao.devops/github-actions-generator",
 ]
 
 [runtime]
