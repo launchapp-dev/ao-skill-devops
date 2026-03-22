@@ -125,6 +125,36 @@ phases:
         type: string
         description: Path to nixpacks.toml config file
 
+  railway-config-test:
+    mode: agent
+    agent: integration-tester-agent
+    directive: "Run unit tests for Railway deployment configurations. Validates TOML syntax, Docker deployments, Nixpacks builds, monorepo services, health checks, and environment variables generation."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      test_type:
+        type: string
+        enum: [toml_validation, docker_deployments, nixpacks_builds, monorepo_services, health_checks, environment_variables, all]
+        description: Type of Railway config test to run
+      target_config:
+        type: string
+        description: Path to the generated railway.toml file to test
+      generated_config:
+        type: string
+        description: Raw railway.toml content to validate
+      test_scenario:
+        type: string
+        description: Specific test scenario or use case
+      deployment_type:
+        type: string
+        enum: [docker, nixpacks, buildpack, monorepo, static, all]
+        description: Deployment type to test
+      validation_level:
+        type: string
+        enum: [strict, moderate, lenient]
+        default: moderate
+        description: Validation strictness level
+
   dockerfile-generate:
     mode: agent
     agent: dockerfile-agent
@@ -436,6 +466,27 @@ phases:
         default: moderate
         description: Validation strictness level
 
+  vercel-config-test:
+    mode: agent
+    agent: vercel-config-test-agent
+    directive: "Run unit tests for Vercel config generator. Validates vercel.json generation for static sites, serverless functions, edge functions, monorepos, route configurations, and environment variables."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      test_scenario:
+        type: string
+        enum: [static_sites, serverless_functions, edge_functions, monorepos, route_configurations, environment_variables, framework_presets, validation_tests, edge_cases, all]
+        default: all
+        description: Test scenario to run
+      test_case_id:
+        type: string
+        description: Specific test case ID to run (optional)
+      validation_level:
+        type: string
+        enum: [strict, moderate, lenient]
+        default: moderate
+        description: Validation strictness level
+
 workflows:
   - id: ao.devops/standard
     name: "ao-skill-devops Standard"
@@ -499,12 +550,31 @@ workflows:
       - create-pr
       - pr-review
 
+  - id: ao.devops/vercel-config-with-tests
+    name: "Vercel Config Generator with Unit Tests"
+    description: "Generate Vercel deployment configurations and run comprehensive unit tests covering all deployment types"
+    phases:
+      - vercel-config-generate
+      - vercel-config-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/vercel-config-unit-tests
+    name: "Vercel Config Unit Tests"
+    description: "Run unit tests for Vercel config generator. Validates vercel.json generation for all supported deployment types and configurations."
+    phases:
+      - vercel-config-test
+      - push-branch
+      - create-pr
+      - pr-review
+
   - id: ao.devops/railway-config
     name: "Railway Config Generator"
     description: "Generate Railway deployment configurations (railway.toml) for Docker containers, Nixpacks builds, and monorepo services"
     phases:
       - railway-config-generate
-      - integration-test
+      - railway-config-test
       - push-branch
       - create-pr
       - pr-review

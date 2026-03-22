@@ -1,0 +1,603 @@
+id: ao.devops/vercel-config-generator-tests
+description: "Unit tests for Vercel config generator. Validates vercel.json generation for static sites, serverless functions, edge functions, monorepos, route configurations, and environment variables."
+version: "0.1.0"
+
+agent: vercel-config-test-agent
+
+test_scenarios:
+  static_sites:
+    name: "Static Site Generation"
+    description: "Test vercel.json generation for static site deployments"
+    test_cases:
+      - id: static-basic
+        name: "Basic static site"
+        input:
+          deployment_type: static
+          build_command: npm run build
+          output_directory: dist
+        expected:
+          version: 2
+          build_command: "npm run build"
+          output_directory: dist
+        validation:
+          - field: version
+            must_equal: 2
+          - field: output_directory
+            must_equal: dist
+          - field: builds
+            should_exist: false
+
+      - id: static-with-env
+        name: "Static site with environment variables"
+        input:
+          deployment_type: static
+          build_command: npm run build
+          output_directory: public
+          environment_variables:
+            NODE_ENV: production
+            SITE_URL: https://example.com
+        expected:
+          version: 2
+          env:
+            NODE_ENV: production
+            SITE_URL: https://example.com
+        validation:
+          - field: env.NODE_ENV
+            must_equal: production
+          - field: env.SITE_URL
+            must_equal: https://example.com
+
+      - id: static-with-regions
+        name: "Static site with specific regions"
+        input:
+          deployment_type: static
+          output_directory: dist
+          regions:
+            - iad1
+            - sfo1
+        expected:
+          version: 2
+          regions:
+            - iad1
+            - sfo1
+        validation:
+          - field: regions
+            must_contain: iad1
+          - field: regions
+            must_contain: sfo1
+
+  serverless_functions:
+    name: "Serverless Function Generation"
+    description: "Test vercel.json generation for serverless function deployments"
+    test_cases:
+      - id: serverless-basic
+        name: "Basic serverless API"
+        input:
+          deployment_type: serverless
+          framework: nodejs
+          build_command: npm run build
+          functions:
+            api:
+              runtime: nodejs18.x
+              memory: 1024
+              maxDuration: 10
+        expected:
+          version: 2
+          functions:
+            api:
+              runtime: nodejs18.x
+              memory: 1024
+              maxDuration: 10
+        validation:
+          - field: functions.api.runtime
+            must_equal: nodejs18.x
+          - field: functions.api.memory
+            must_equal: 1024
+          - field: functions.api.maxDuration
+            must_equal: 10
+
+      - id: serverless-secrets
+        name: "Serverless with secret environment variables"
+        input:
+          deployment_type: serverless
+          framework: nodejs
+          secret_environment_variables:
+            - DATABASE_URL
+            - API_KEY
+          environment_variables:
+            NODE_ENV: production
+        expected:
+          version: 2
+          env:
+            DATABASE_URL: ${{ secrets.DATABASE_URL }}
+            API_KEY: ${{ secrets.API_KEY }}
+            NODE_ENV: production
+        validation:
+          - field: env.DATABASE_URL
+            must_equal: ${{ secrets.DATABASE_URL }}
+          - field: env.API_KEY
+            must_equal: ${{ secrets.API_KEY }}
+          - field: env.NODE_ENV
+            must_equal: production
+
+      - id: serverless-multi-function
+        name: "Multiple serverless functions"
+        input:
+          deployment_type: serverless
+          framework: nodejs
+          functions:
+            api:
+              runtime: nodejs18.x
+              memory: 1024
+            auth:
+              runtime: nodejs18.x
+              memory: 512
+              maxDuration: 5
+            webhooks:
+              runtime: nodejs18.x
+              memory: 256
+              maxDuration: 3
+        expected:
+          version: 2
+          functions:
+            api:
+              runtime: nodejs18.x
+              memory: 1024
+            auth:
+              runtime: nodejs18.x
+              memory: 512
+              maxDuration: 5
+            webhooks:
+              runtime: nodejs18.x
+              memory: 256
+              maxDuration: 3
+        validation:
+          - field: functions.api
+            must_exist: true
+          - field: functions.auth
+            must_exist: true
+          - field: functions.webhooks
+            must_exist: true
+
+  edge_functions:
+    name: "Edge Function Generation"
+    description: "Test vercel.json generation for edge function deployments"
+    test_cases:
+      - id: edge-basic
+        name: "Basic edge function"
+        input:
+          deployment_type: edge
+          build_command: npm run build
+          functions:
+            middleware:
+              runtime: edge
+              memory: 128
+        expected:
+          version: 2
+          functions:
+            middleware:
+              runtime: edge
+              memory: 128
+        validation:
+          - field: functions.middleware.runtime
+            must_equal: edge
+          - field: functions.middleware.memory
+            must_equal: 128
+
+      - id: edge-with-headers
+        name: "Edge function with caching headers"
+        input:
+          deployment_type: edge
+          functions:
+            api-edge:
+              runtime: edge
+              regions:
+                - iad1
+                - sfo1
+          routes:
+            - src: /api/(.*)
+              dest: /api/$1
+              headers:
+                - x-edge-cache: hit
+                - cache-control: public, max-age=3600
+        expected:
+          version: 2
+          routes:
+            - src: /api/(.*)
+              dest: /api/$1
+        validation:
+          - field: routes[0].src
+            must_equal: /api/(.*)
+          - field: routes[0].headers
+            must_exist: true
+
+  monorepos:
+    name: "Monorepo Configuration"
+    description: "Test vercel.json generation for monorepo deployments"
+    test_cases:
+      - id: monorepo-basic
+        name: "Basic monorepo setup"
+        input:
+          deployment_type: monorepo
+          regions:
+            - iad1
+          environment_variables:
+            NODE_ENV: production
+        expected:
+          version: 2
+          regions:
+            - iad1
+          env:
+            NODE_ENV: production
+        validation:
+          - field: regions
+            must_contain: iad1
+          - field: env.NODE_ENV
+            must_equal: production
+
+      - id: monorepo-with-functions
+        name: "Monorepo with function configurations"
+        input:
+          deployment_type: monorepo
+          regions:
+            - iad1
+            - sfo1
+          functions:
+            api:
+              memory: 512
+              maxDuration: 30
+            web:
+              memory: 256
+              maxDuration: 10
+          environment_variables:
+            NODE_ENV: production
+            API_URL: https://api.example.com
+        expected:
+          version: 2
+          functions:
+            api:
+              memory: 512
+              maxDuration: 30
+            web:
+              memory: 256
+              maxDuration: 10
+        validation:
+          - field: functions.api.maxDuration
+            must_equal: 30
+          - field: functions.web.memory
+            must_equal: 256
+          - field: env.API_URL
+            must_equal: https://api.example.com
+
+      - id: monorepo-multi-region
+        name: "Monorepo with multiple deployment regions"
+        input:
+          deployment_type: monorepo
+          regions:
+            - iad1
+            - sfo1
+            - sin1
+            - fra1
+          functions:
+            api:
+              memory: 1024
+        expected:
+          version: 2
+          regions:
+            - iad1
+            - sfo1
+            - sin1
+            - fra1
+        validation:
+          - field: regions.length
+            must_equal: 4
+          - field: regions
+            must_contain: sin1
+
+  route_configurations:
+    name: "Route Configuration Tests"
+    description: "Test vercel.json generation with various route configurations"
+    test_cases:
+      - id: routes-redirects
+        name: "Routes with redirects"
+        input:
+          deployment_type: static
+          output_directory: dist
+          routes:
+            - src: /old-page
+              dest: /new-page
+              status: 301
+        expected:
+          version: 2
+          routes:
+            - src: /old-page
+              dest: /new-page
+              status: 301
+        validation:
+          - field: routes[0].status
+            must_equal: 301
+
+      - id: routes-rewrites
+        name: "Routes with rewrites"
+        input:
+          deployment_type: static
+          output_directory: dist
+          routes:
+            - src: /api/users/(.*)
+              dest: /api/proxy/$1
+            - src: /blog/(.*)
+              dest: /cms/$1
+        expected:
+          version: 2
+          routes:
+            - src: /api/users/(.*)
+              dest: /api/proxy/$1
+        validation:
+          - field: routes.length
+            must_be_at_least: 2
+
+      - id: routes-headers
+        name: "Routes with custom headers"
+        input:
+          deployment_type: serverless
+          framework: nodejs
+          routes:
+            - src: /static/(.*)
+              dest: /static/$1
+              headers:
+                - x-custom-header: value
+                - cache-control: public, max-age=31536000, immutable
+            - src: /(.*)
+              dest: /$1
+              headers:
+                - x-frame-options: DENY
+                - x-content-type-options: nosniff
+        expected:
+          version: 2
+        validation:
+          - field: routes[0].headers
+            must_exist: true
+          - field: routes[0].headers.length
+            must_be_at_least: 1
+
+      - id: routes-mixed
+        name: "Mixed route configuration"
+        input:
+          deployment_type: framework
+          framework: nextjs
+          routes:
+            - src: /api/(.*)
+              dest: /api/$1
+            - src: /old-blog/(.*)
+              dest: /blog/$1
+              status: 301
+            - src: /admin/(.*)
+              dest: /admin-panel/$1
+            - src: /(.*)
+              dest: /$1
+              headers:
+                - x-powered-by: Vercel
+
+  environment_variables:
+    name: "Environment Variable Tests"
+    description: "Test vercel.json generation with various environment variable configurations"
+    test_cases:
+      - id: env-basic
+        name: "Basic environment variables"
+        input:
+          deployment_type: static
+          output_directory: dist
+          environment_variables:
+            NODE_ENV: production
+            NEXT_PUBLIC_SITE_URL: https://example.com
+        expected:
+          version: 2
+          env:
+            NODE_ENV: production
+            NEXT_PUBLIC_SITE_URL: https://example.com
+        validation:
+          - field: env.NODE_ENV
+            must_equal: production
+          - field: env.NEXT_PUBLIC_SITE_URL
+            must_equal: https://example.com
+
+      - id: env-with-secrets
+        name: "Environment variables with secrets"
+        input:
+          deployment_type: serverless
+          framework: nodejs
+          environment_variables:
+            NODE_ENV: production
+            LOG_LEVEL: info
+          secret_environment_variables:
+            - DATABASE_URL
+            - REDIS_URL
+            - API_SECRET
+        expected:
+          version: 2
+          env:
+            NODE_ENV: production
+            LOG_LEVEL: info
+            DATABASE_URL: ${{ secrets.DATABASE_URL }}
+            REDIS_URL: ${{ secrets.REDIS_URL }}
+            API_SECRET: ${{ secrets.API_SECRET }}
+        validation:
+          - field: env.DATABASE_URL
+            must_equal: ${{ secrets.DATABASE_URL }}
+          - field: env.REDIS_URL
+            must_equal: ${{ secrets.REDIS_URL }}
+          - field: env.API_SECRET
+            must_equal: ${{ secrets.API_SECRET }}
+
+      - id: env-array-secrets
+        name: "Array of secret variables"
+        input:
+          deployment_type: serverless
+          framework: nodejs
+          secret_environment_variables:
+            - STRIPE_KEY
+            - SENDGRID_KEY
+            - TWILIO_SID
+            - AWS_ACCESS_KEY
+            - AWS_SECRET_KEY
+        expected:
+          version: 2
+        validation:
+          - field: env.STRIPE_KEY
+            must_equal: ${{ secrets.STRIPE_KEY }}
+          - field: env.AWS_SECRET_KEY
+            must_equal: ${{ secrets.AWS_SECRET_KEY }}
+
+  framework_presets:
+    name: "Framework Preset Tests"
+    description: "Test vercel.json generation with different framework presets"
+    test_cases:
+      - id: framework-nextjs
+        name: "Next.js framework preset"
+        input:
+          deployment_type: framework
+          framework: nextjs
+          regions:
+            - iad1
+            - sfo1
+          routes:
+            - src: /api/(.*)
+              dest: /api/$1
+        expected:
+          version: 2
+        validation:
+          - field: regions.length
+            must_equal: 2
+
+      - id: framework-astro
+        name: "Astro framework preset"
+        input:
+          deployment_type: framework
+          framework: astro
+          build_command: npm run build
+          output_directory: dist
+        expected:
+          version: 2
+          build_command: npm run build
+          output_directory: dist
+        validation:
+          - field: build_command
+            must_equal: npm run build
+          - field: output_directory
+            must_equal: dist
+
+      - id: framework-sveltekit
+        name: "SvelteKit framework preset"
+        input:
+          deployment_type: framework
+          framework: sveltekit
+        expected:
+          version: 2
+        validation:
+          - field: version
+            must_equal: 2
+
+      - id: framework-remix
+        name: "Remix framework preset"
+        input:
+          deployment_type: framework
+          framework: remix
+          build_command: npm run build
+        expected:
+          version: 2
+        validation:
+          - field: build_command
+            must_equal: npm run build
+
+      - id: framework-nuxt
+        name: "Nuxt framework preset"
+        input:
+          deployment_type: framework
+          framework: nuxt
+          build_command: npm run build
+        expected:
+          version: 2
+        validation:
+          - field: build_command
+            must_equal: npm run build
+
+  validation_tests:
+    name: "JSON Validation Tests"
+    description: "Test that generated vercel.json is valid JSON"
+    test_cases:
+      - id: valid-json-output
+        name: "Output must be valid JSON"
+        input:
+          deployment_type: static
+          output_directory: dist
+        expected:
+          valid_json: true
+        validation:
+          - type: json_parse
+            must_succeed: true
+
+      - id: required-fields
+        name: "Required fields present"
+        input:
+          deployment_type: serverless
+          framework: nodejs
+        expected:
+          version: 2
+        validation:
+          - field: version
+            must_exist: true
+            must_equal: 2
+
+  edge_cases:
+    name: "Edge Case Tests"
+    description: "Test edge cases and boundary conditions"
+    test_cases:
+      - id: empty-functions
+        name: "Serverless with empty function config"
+        input:
+          deployment_type: serverless
+          framework: nodejs
+          functions: {}
+        expected:
+          version: 2
+        validation:
+          - field: version
+            must_equal: 2
+
+      - id: empty-routes
+        name: "Static with empty routes array"
+        input:
+          deployment_type: static
+          output_directory: dist
+          routes: []
+        expected:
+          version: 2
+        validation:
+          - field: version
+            must_equal: 2
+
+      - id: empty-regions
+        name: "Monorepo with no specified regions"
+        input:
+          deployment_type: monorepo
+        expected:
+          version: 2
+        validation:
+          - field: version
+            must_equal: 2
+
+      - id: special-characters-env
+        name: "Environment variables with special characters"
+        input:
+          deployment_type: static
+          environment_variables:
+            NODE_ENV: production
+            DATABASE_URL: postgres://user:pass@host:5432/db?ssl=true
+            JSON_CONFIG: '{"key": "value"}'
+        expected:
+          version: 2
+        validation:
+          - field: env.DATABASE_URL
+            must_contain: postgres://
+          - field: env.JSON_CONFIG
+            must_contain: '"key"'
