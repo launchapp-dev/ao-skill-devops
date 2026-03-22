@@ -638,6 +638,107 @@ phases:
         default: env
         description: Output format for the generated file
 
+  cli-generator-generate:
+    mode: agent
+    agent: cli-generator-interface-agent
+    directive: "Generate CLI interface for invoking DevOps generators. Creates a unified command-line interface with subcommands for GitHub Actions, Dockerfile, docker-compose, Vercel, Railway, Kubernetes, and .env generators. Supports interactive and non-interactive modes with JSON/YAML input."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      subcommand:
+        type: string
+        enum: [github-actions, dockerfile, docker-compose, vercel, railway, kubernetes, env, python-ci, all]
+        description: Generator subcommand to invoke
+        required: true
+      interactive:
+        type: boolean
+        default: false
+        description: Enable interactive mode with prompts
+      non_interactive:
+        type: boolean
+        default: true
+        description: Disable interactive mode
+      output:
+        type: string
+        description: Output file path
+      format:
+        type: string
+        enum: [json, yaml, yml, toml, env, text]
+        default: yaml
+        description: Output format
+      dry_run:
+        type: boolean
+        default: false
+        description: Show what would be generated without writing files
+      verbose:
+        type: boolean
+        default: false
+        description: Enable verbose output
+      quiet:
+        type: boolean
+        default: false
+        description: Suppress non-essential output
+      input_file:
+        type: string
+        description: Input file path (JSON or YAML)
+      json_input:
+        type: string
+        description: JSON input string
+      yaml_input:
+        type: string
+        description: YAML input string
+      config_file:
+        type: string
+        description: Path to config file
+      preset:
+        type: string
+        description: Use a predefined preset configuration
+      template:
+        type: string
+        description: Use a custom template
+      stack:
+        type: string
+        description: Technology stack preset (e.g., nodejs-postgres)
+      generator_options:
+        type: object
+        description: Options to pass to the underlying generator
+        properties:
+          environment:
+            type: string
+            description: Target language/runtime
+          name:
+            type: string
+            description: Configuration name
+          language_version:
+            type: string
+            description: Specific language version
+          framework:
+            type: string
+            description: Target framework
+          build_type:
+            type: string
+            description: Dockerfile build strategy
+          deployment_type:
+            type: string
+            description: Deployment type
+          manifest_type:
+            type: string
+            description: Kubernetes manifest type
+          services:
+            type: array
+            items:
+              type: string
+            description: Services to include
+          port:
+            type: integer
+            description: Application port
+          healthcheck:
+            type: boolean
+            description: Enable health checks
+          cache:
+            type: boolean
+            description: Enable caching
+
 workflows:
   - id: ao.devops/standard
     name: "ao-skill-devops Standard"
@@ -777,6 +878,29 @@ workflows:
     phases:
       - env-example-generate
       - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/cli-generator
+    name: "CLI Generator Interface"
+    description: "Generate CLI interface for invoking DevOps generators. Provides unified command-line interface with subcommands for GitHub Actions, Dockerfile, docker-compose, Vercel, Railway, Kubernetes, and .env generators. Supports interactive and non-interactive modes with JSON/YAML input."
+    phases:
+      - cli-generator-generate
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/cli-generator-full
+    name: "CLI Generator with All Configs"
+    description: "Generate CLI interface and all DevOps configurations (GitHub Actions, Dockerfile, docker-compose, Kubernetes, env) for a complete DevOps setup."
+    phases:
+      - cli-generator-generate
+      - github-actions-generate
+      - dockerfile-generate
+      - docker-compose-generate
+      - k8s-manifest-generate
+      - env-example-generate
       - push-branch
       - create-pr
       - pr-review
