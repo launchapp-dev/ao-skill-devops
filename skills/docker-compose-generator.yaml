@@ -1,0 +1,526 @@
+id: ao.devops/docker-compose-generator
+description: "Generate docker-compose.yml files for multi-service orchestration with networks, volumes, environment variables, and health checks. Supports development, staging, and production configurations."
+version: "0.1.0"
+
+agent: docker-compose-agent
+
+compose_versions:
+  - "3.8"
+  - "3.9"
+  - "3.7"
+  - "3.3"
+
+features:
+  - multi_service_orchestration
+  - network_configuration
+  - volume_mounts
+  - environment_variables
+  - health_checks
+  - depends_on_dependencies
+  - port_mapping
+  - restart_policies
+  - logging_configuration
+  - secrets_management
+  - init_services
+  - long_running_services
+
+input_schema:
+  compose_version:
+    type: string
+    default: "3.8"
+    description: Docker Compose file version (3.8 recommended for most features)
+  services:
+    type: array
+    description: List of services to define
+    required: true
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name (required)
+          required: true
+        image:
+          type: string
+          description: Docker image to use
+        build:
+          type: object
+          description: Build configuration (instead of image)
+          properties:
+            context:
+              type: string
+            dockerfile:
+              type: string
+            args:
+              type: object
+        ports:
+          type: array
+          description: Port mappings (host:container)
+          items:
+            type: string
+        environment:
+          type: object
+          description: Environment variables
+          additionalProperties:
+            type: [string, number, boolean]
+        env_file:
+          type: string
+          description: Path to environment file
+        volumes:
+          type: array
+          description: Volume mounts
+          items:
+            type: string
+        networks:
+          type: array
+          description: Network names to join
+          items:
+            type: string
+        depends_on:
+          type: array
+          description: Service dependencies
+          items:
+            type: string
+        healthcheck:
+          type: object
+          description: Health check configuration
+          properties:
+            test:
+              type: string
+              description: Health check command
+            interval:
+              type: string
+              description: Check interval (e.g., "30s")
+            timeout:
+              type: string
+              description: Timeout (e.g., "5s")
+            retries:
+              type: integer
+              description: Retry count
+            start_period:
+              type: string
+              description: Initial grace period
+        restart:
+          type: string
+          default: "unless-stopped"
+          description: Restart policy
+          enum: ["no", "always", "on-failure", "unless-stopped"]
+        command:
+          type: string
+          description: Override the default command
+        entrypoint:
+          type: string
+          description: Override the entrypoint
+        user:
+          type: string
+          description: Run as user
+        working_dir:
+          type: string
+          description: Working directory
+        tty:
+          type: boolean
+          default: false
+          description: Allocate a pseudo-TTY
+        stdin_open:
+          type: boolean
+          default: false
+          description: Keep STDIN open
+        logging:
+          type: object
+          description: Logging configuration
+          properties:
+            driver:
+              type: string
+              default: "json-file"
+            options:
+              type: object
+              description: Driver-specific options
+        cap_add:
+          type: array
+          description: Add Linux capabilities
+          items:
+            type: string
+        cap_drop:
+          type: array
+          description: Drop Linux capabilities
+          items:
+            type: string
+        privileged:
+          type: boolean
+          description: Give extended privileges to the container
+        extra_hosts:
+          type: array
+          description: Add host mappings
+          items:
+            type: string
+  networks:
+    type: array
+    description: Network definitions
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Network name
+          required: true
+        driver:
+          type: string
+          default: "bridge"
+          description: Network driver
+        driver_opts:
+          type: object
+          description: Driver-specific options
+        ipam:
+          type: object
+          description: IPAM configuration
+          properties:
+            driver:
+              type: string
+            config:
+              type: array
+              items:
+                type: object
+                properties:
+                  subnet:
+                    type: string
+                  gateway:
+                    type: string
+        external:
+          type: boolean
+          default: false
+          description: Use existing external network
+  volumes:
+    type: array
+    description: Volume definitions
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Volume name
+          required: true
+        driver:
+          type: string
+          default: "local"
+          description: Volume driver
+        driver_opts:
+          type: object
+          description: Driver-specific options
+        external:
+          type: boolean
+          default: false
+          description: Use existing external volume
+  configs:
+    type: array
+    description: Config definitions
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Config name
+          required: true
+        file:
+          type: string
+          description: Config file path
+        external:
+          type: boolean
+          default: false
+          description: Use existing external config
+  secrets:
+    type: array
+    description: Secret definitions
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Secret name
+          required: true
+        file:
+          type: string
+          description: Secret file path
+        external:
+          type: boolean
+          default: false
+          description: Use existing external secret
+
+capabilities:
+  docker_compose_generation: true
+  multi_service_support: true
+  network_configuration: true
+  volume_mounts: true
+  healthcheck_support: true
+  depends_on_support: true
+  secrets_support: true
+  configs_support: true
+  logging_configuration: true
+  restart_policy_support: true
+
+examples:
+  basic_web_app: |
+    input:
+      compose_version: "3.8"
+      services:
+        - name: web
+          image: nginx:alpine
+          ports:
+            - "80:80"
+          volumes:
+            - "./html:/usr/share/nginx/html:ro"
+          healthcheck:
+            test: "curl -f http://localhost/ || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+          restart: unless-stopped
+
+  multi_service_with_db: |
+    input:
+      compose_version: "3.8"
+      services:
+        - name: api
+          build:
+            context: .
+            dockerfile: Dockerfile
+          ports:
+            - "3000:3000"
+          environment:
+            DATABASE_URL: postgres://postgres:secret@db:5432/myapp
+            NODE_ENV: production
+          depends_on:
+            - db
+            - redis
+          healthcheck:
+            test: "curl -f http://localhost:3000/health || exit 1"
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+          restart: unless-stopped
+        - name: db
+          image: postgres:15-alpine
+          environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: secret
+            POSTGRES_DB: myapp
+          volumes:
+            - db_data:/var/lib/postgresql/data
+          healthcheck:
+            test: ["CMD", "pg_isready", "-U", "postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        - name: redis
+          image: redis:7-alpine
+          volumes:
+            - redis_data:/data
+          healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+      networks:
+        - name: backend
+          driver: bridge
+      volumes:
+        - name: db_data
+          driver: local
+        - name: redis_data
+          driver: local
+
+  development_stack: |
+    input:
+      compose_version: "3.8"
+      services:
+        - name: app
+          build:
+            context: .
+            dockerfile: Dockerfile.dev
+          ports:
+            - "3000:3000"
+            - "9229:9229"
+          environment:
+            NODE_ENV: development
+            DEBUG: "true"
+          volumes:
+            - ".:/app"
+            - "/app/node_modules"
+          tty: true
+          stdin_open: true
+          depends_on:
+            - db
+            - redis
+            - mq
+        - name: db
+          image: postgres:15-alpine
+          environment:
+            POSTGRES_USER: dev
+            POSTGRES_PASSWORD: dev
+            POSTGRES_DB: devdb
+          ports:
+            - "5432:5432"
+          volumes:
+            - pg_data:/var/lib/postgresql/data
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - "6379:6379"
+          volumes:
+            - redis_data:/data
+        - name: mq
+          image: rabbitmq:3-management
+          ports:
+            - "5672:5672"
+            - "15672:15672"
+          environment:
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
+          volumes:
+            - rabbitmq_data:/var/lib/rabbitmq
+      networks:
+        - name: dev
+          driver: bridge
+      volumes:
+        - name: pg_data
+          driver: local
+        - name: redis_data
+          driver: local
+        - name: rabbitmq_data
+          driver: local
+
+  production_with_secrets: |
+    input:
+      compose_version: "3.8"
+      services:
+        - name: api
+          image: myregistry/myapp:v1.0.0
+          ports:
+            - "8080:8080"
+          secrets:
+            - db_password
+            - api_key
+          environment:
+            NODE_ENV: production
+            DATABASE_HOST: db
+          depends_on:
+            db:
+              condition: service_healthy
+            redis:
+              condition: service_started
+          healthcheck:
+            test: "curl -f http://localhost:8080/health || exit 1"
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
+          restart: unless-stopped
+          logging:
+            driver: json-file
+            options:
+              max-size: "100m"
+              max-file: "3"
+        - name: db
+          image: postgres:15-alpine
+          volumes:
+            - db_data:/var/lib/postgresql/data
+          secrets:
+            - db_password
+          healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        - name: redis
+          image: redis:7-alpine
+          volumes:
+            - redis_data:/data
+          healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+      networks:
+        - name: production
+          driver: bridge
+      volumes:
+        - name: db_data
+          driver: local
+        - name: redis_data
+          driver: local
+      secrets:
+        - name: db_password
+          file: ./secrets/db_password.txt
+        - name: api_key
+          file: ./secrets/api_key.txt
+
+  with_custom_networks: |
+    input:
+      compose_version: "3.8"
+      services:
+        - name: frontend
+          image: nginx:alpine
+          ports:
+            - "80:80"
+            - "443:443"
+          networks:
+            - web
+          depends_on:
+            - api
+        - name: api
+          build:
+            context: ./api
+            dockerfile: Dockerfile
+          networks:
+            - web
+            - backend
+          environment:
+            DATABASE_URL: postgresql://user:pass@db:5432/mydb
+          depends_on:
+            - db
+        - name: worker
+          build:
+            context: ./worker
+            dockerfile: Dockerfile
+          networks:
+            - backend
+          environment:
+            DATABASE_URL: postgresql://user:pass@db:5432/mydb
+            REDIS_URL: redis://redis:6379
+          depends_on:
+            - db
+            - redis
+        - name: db
+          image: postgres:15-alpine
+          networks:
+            - backend
+          volumes:
+            - db_data:/var/lib/postgresql/data
+          environment:
+            POSTGRES_USER: user
+            POSTGRES_PASSWORD: pass
+            POSTGRES_DB: mydb
+        - name: redis
+          image: redis:7-alpine
+          networks:
+            - backend
+          volumes:
+            - redis_data:/data
+      networks:
+        - name: web
+          driver: bridge
+          ipam:
+            driver: default
+            config:
+              - subnet: 172.28.0.0/16
+        - name: backend
+          driver: bridge
+          ipam:
+            driver: default
+            config:
+              - subnet: 172.29.0.0/16
+      volumes:
+        - name: db_data
+          driver: local
+        - name: redis_data
+          driver: local
