@@ -31,6 +31,33 @@ phases:
         type: object
         description: Additional generation options
 
+  integration-test:
+    mode: agent
+    agent: integration-tester-agent
+    directive: "Run integration tests on generated DevOps configs. Validate Kubernetes YAML, test GitHub Actions workflows, verify Docker configs. Use mocks for external services when appropriate."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      test_type:
+        type: string
+        enum: [cli, config, e2e, all]
+        description: Type of integration test to run
+      target_config:
+        type: string
+        description: Path to the generated config file to test
+      test_scenario:
+        type: string
+        description: Specific test scenario or use case
+      mock_mode:
+        type: boolean
+        default: true
+        description: Whether to use mock services or real endpoints
+      validation_level:
+        type: string
+        enum: [strict, moderate, lenient]
+        default: moderate
+        description: Validation strictness level
+
 workflows:
   - id: ao.devops/standard
     name: "ao-skill-devops Standard"
@@ -54,6 +81,17 @@ workflows:
     description: "Generate Kubernetes manifests for deployments, services, ingress, configmaps, secrets, PVCs, Helm charts, and Kustomize overlays"
     phases:
       - k8s-manifest-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/standard-with-tests
+    name: "ao-skill-devops Standard with Integration Tests"
+    description: "Plan → Implement → Integration Test → Push → PR"
+    phases:
+      - ao.devops-implement
+      - integration-test
       - push-branch
       - create-pr
       - pr-review

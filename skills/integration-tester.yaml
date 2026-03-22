@@ -1,0 +1,85 @@
+id: ao.devops/integration-tester
+description: "End-to-end integration testing for generated DevOps configs. Tests CLI tools, validates generated YAML/JSON configs against schemas, and verifies generated configs work when applied."
+version: "0.1.0"
+
+agent: integration-tester-agent
+
+capabilities:
+  cli_testing: true
+  config_validation: true
+  e2e_testing: true
+  mock_services: true
+
+test_categories:
+  cli_tests:
+    description: "End-to-end CLI tests for generated commands"
+    includes:
+      - github_actions_execution
+      - docker_build_test
+      - kubectl_apply_simulation
+  config_validation:
+    description: "Validate generated configs against schemas"
+    includes:
+      - kubernetes_schema_validation
+      - dockerfile_syntax_check
+      - github_actions_schema_validation
+  mock_services:
+    description: "Mock external services for testing"
+    includes:
+      - github_api_mock
+      - docker_registry_mock
+      - kubernetes_api_mock
+
+input_schema:
+  test_type:
+    type: string
+    enum: [cli, config, e2e, all]
+    description: Type of integration test to run
+    required: true
+  target_config:
+    type: string
+    description: Path to the generated config file to test
+    required: true
+  test_scenario:
+    type: string
+    description: Specific test scenario or use case
+  mock_mode:
+    type: boolean
+    default: true
+    description: Whether to use mock services or real endpoints
+  validation_level:
+    type: string
+    enum: [strict, moderate, lenient]
+    default: moderate
+    description: Validation strictness level
+
+output_schema:
+  test_results:
+    type: object
+    properties:
+      passed: boolean
+      duration_ms: number
+      errors: array
+      warnings: array
+      mock_calls: array
+
+examples:
+  kubernetes_config_validation: |
+    input:
+      test_type: config
+      target_config: ./output/deployment.yaml
+      validation_level: strict
+
+  github_actions_e2e: |
+    input:
+      test_type: e2e
+      target_config: ./output/ci.yaml
+      test_scenario: pr_opened
+      mock_mode: true
+
+  docker_build_test: |
+    input:
+      test_type: cli
+      target_config: ./output/Dockerfile
+      test_scenario: build_and_run
+      mock_mode: false
