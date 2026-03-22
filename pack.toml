@@ -26,6 +26,7 @@ exports = [
   "ao.devops/vercel-config",
   "ao.devops/railway-config",
   "ao.devops/dockerfile",
+  "ao.devops/testing-infrastructure",
 ]
 
 [skills]
@@ -37,6 +38,7 @@ exports = [
   "ao.devops/vercel-config-generator",
   "ao.devops/railway-config-generator",
   "ao.devops/dockerfile-generator",
+  "ao.devops/testing-infrastructure",
 ]
 
 [runtime]

@@ -1,0 +1,422 @@
+id: ao.devops/testing-infrastructure
+description: "Generate comprehensive testing infrastructure for DevOps config generators. Creates pytest-based test suites with unit tests, schema validation, output correctness tests, mock file system operations, and CI integration. Supports 80%+ coverage thresholds."
+version: "0.1.0"
+
+agent: testing-infrastructure-agent
+
+test_generators:
+  - dockerfile
+  - github-actions
+  - k8s-manifest
+  - vercel-config
+  - railway-config
+  - base-framework
+
+test_types:
+  - unit
+  - schema_validation
+  - output_correctness
+  - integration
+
+features:
+  - mock_file_system
+  - coverage_tracking
+  - ci_integration
+  - fixture_generation
+  - parameterized_tests
+
+input_schema:
+  test_target:
+    type: string
+    enum: [dockerfile, github-actions, k8s-manifest, vercel-config, railway-config, all]
+    description: Generator to create tests for
+    required: true
+  test_types:
+    type: array
+    items:
+      type: string
+      enum: [unit, schema_validation, output_correctness, integration]
+    description: Types of tests to generate
+    default: [unit, schema_validation, output_correctness]
+  coverage_threshold:
+    type: number
+    minimum: 0
+    maximum: 100
+    default: 80
+    description: Minimum coverage percentage required
+  mock_mode:
+    type: boolean
+    default: true
+    description: Use mock file system operations
+  ci_template:
+    type: string
+    enum: [github-actions, gitlab-ci, none]
+    default: github-actions
+    description: CI platform for test execution
+
+output_schema:
+  test_files:
+    type: array
+    description: Generated test file paths
+  coverage_config:
+    type: object
+    description: Coverage configuration
+  ci_workflow:
+    type: string
+    description: Path to CI workflow file
+
+capabilities:
+  test_generation: true
+  mock_file_system: true
+  coverage_tracking: true
+  ci_integration: true
+  schema_validation: true
+  parameterized_tests: true
+
+examples:
+  all_generators: |
+    input:
+      test_target: all
+      test_types:
+        - unit
+        - schema_validation
+        - output_correctness
+      coverage_threshold: 80
+      mock_mode: true
+      ci_template: github-actions
+
+  dockerfile_only: |
+    input:
+      test_target: dockerfile
+      test_types:
+        - unit
+        - schema_validation
+        - output_correctness
+      coverage_threshold: 85
+      mock_mode: true
+      ci_template: github-actions
+
+  k8s_with_integration: |
+    input:
+      test_target: k8s-manifest
+      test_types:
+        - unit
+        - schema_validation
+        - output_correctness
+        - integration
+      coverage_threshold: 80
+      mock_mode: true
+      ci_template: github-actions
+
+test_cases:
+  dockerfile:
+    - name: "multistage_nodejs"
+      description: "Multi-stage Dockerfile for Node.js with build caching"
+      input:
+        build_type: multistage
+        language: nodejs
+        language_version: "20.x"
+        build_command: npm run build
+        start_command: npm start
+        port: 3000
+        healthcheck:
+          cmd: "curl -f http://localhost:3000/health || exit 1"
+          interval: 30s
+          timeout: 5s
+          retries: 3
+        environment_variables:
+          NODE_ENV: production
+        user: node
+      expected_patterns:
+        - "FROM node:"
+        - "npm ci"
+        - "HEALTHCHECK"
+        - "USER node"
+        - "EXPOSE 3000"
+
+    - name: "multistage_python"
+      description: "Multi-stage Dockerfile for Python with Gunicorn"
+      input:
+        build_type: multistage
+        language: python
+        language_version: "3.12"
+        build_command: pip install -r requirements.txt
+        start_command: gunicorn app:app --bind 0.0.0.0:8000
+        port: 8000
+        healthcheck:
+          cmd: "curl -f http://localhost:8000/health || exit 1"
+        environment_variables:
+          FLASK_ENV: production
+        user: app
+      expected_patterns:
+        - "FROM python:"
+        - "pip install"
+        - "gunicorn"
+        - "EXPOSE 8000"
+
+    - name: "distroless_go"
+      description: "Distroless Dockerfile for Go binary"
+      input:
+        build_type: distroless
+        language: go
+        language_version: "1.21"
+        build_command: go build -o main ./cmd/server
+        start_command: ./main
+        port: 8080
+        builder_image: golang:1.21-alpine
+        final_image: gcr.io/distroless/static-debian12
+        user: nonroot
+      expected_patterns:
+        - "FROM golang:"
+        - "FROM gcr.io/distroless"
+        - "no CMD or ENTRYPOINT for distroless"
+
+    - name: "scratch_static"
+      description: "Scratch-based Dockerfile for static binary"
+      input:
+        build_type: scratch
+        language: static
+        start_command: /app/server
+        port: 8080
+        user: nonroot
+      expected_patterns:
+        - "FROM scratch"
+        - "no shell available"
+
+  github_actions:
+    - name: "nodejs_ci_matrix"
+      description: "Node.js CI workflow with matrix builds"
+      input:
+        environment: nodejs
+        workflow_type: ci
+        name: Node.js CI
+        language_version: "20.x"
+        steps:
+          - lint
+          - test
+          - build
+        cache: true
+        matrix:
+          os: [ubuntu-latest, macos-latest]
+          node-version: ["18.x", "20.x"]
+      expected_patterns:
+        - "name: Node.js CI"
+        - "on:"
+        - "jobs:"
+        - "matrix:"
+        - "node-version:"
+
+    - name: "python_cicd_docker"
+      description: "Python CI/CD with Docker build and push"
+      input:
+        environment: python
+        workflow_type: ci-cd
+        name: Python CI/CD
+        language_version: "3.11"
+        steps:
+          - lint
+          - test
+          - build
+          - docker
+        cache: true
+        docker:
+          image_name: myregistry/myapp
+          dockerfile: ./Dockerfile
+      expected_patterns:
+        - "uses: docker/build-push-action"
+        - "docker/build-push-action@v5"
+
+    - name: "go_cd_artifact"
+      description: "Go CD workflow with artifact upload"
+      input:
+        environment: go
+        workflow_type: cd
+        name: Go CD Pipeline
+        language_version: "1.21"
+        steps:
+          - test
+          - build
+          - docker
+        cache: true
+        artifact:
+          name: binary
+          path: ./dist
+      expected_patterns:
+        - "actions/upload-artifact"
+        - "actions/download-artifact"
+
+  k8s_manifest:
+    - name: "deployment_with_probes"
+      description: "K8s Deployment with liveness/readiness probes"
+      input:
+        manifest_type: deployment
+        name: my-app
+        namespace: production
+        replicas: 3
+        image: myregistry/myapp:v1.2.3
+        ports:
+          - name: http
+            containerPort: 8080
+            servicePort: 80
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      expected_patterns:
+        - "apiVersion: apps/v1"
+        - "kind: Deployment"
+        - "replicas: 3"
+        - "livenessProbe"
+        - "readinessProbe"
+
+    - name: "service_clusterip"
+      description: "K8s Service with ClusterIP type"
+      input:
+        manifest_type: service
+        name: my-service
+        namespace: default
+        service_type: ClusterIP
+        ports:
+          - name: http
+            port: 80
+            targetPort: 8080
+      expected_patterns:
+        - "apiVersion: v1"
+        - "kind: Service"
+        - "type: ClusterIP"
+        - "selector:"
+
+    - name: "ingress_with_tls"
+      description: "K8s Ingress with TLS configuration"
+      input:
+        manifest_type: ingress
+        name: my-ingress
+        namespace: default
+        host: example.com
+        tls:
+          - secretName: example-tls
+            hosts:
+              - example.com
+        rules:
+          - path: /
+            backend:
+              serviceName: my-service
+              servicePort: 80
+      expected_patterns:
+        - "apiVersion: networking.k8s.io/v1"
+        - "kind: Ingress"
+        - "tls:"
+        - "rules:"
+
+  vercel_config:
+    - name: "static_site"
+      description: "Vercel config for static site"
+      input:
+        deployment_type: static
+        build_command: npm run build
+        output_directory: dist
+        environment_variables:
+          NODE_ENV: production
+      expected_patterns:
+        - '"version": 2'
+        - '"buildCommand"'
+        - '"outputDirectory"'
+
+    - name: "serverless_api"
+      description: "Vercel config for serverless API"
+      input:
+        deployment_type: serverless
+        framework: nodejs
+        build_command: npm run build
+        functions:
+          api:
+            runtime: nodejs18.x
+            memory: 1024
+            maxDuration: 10
+        environment_variables:
+          DATABASE_URL: "${{ secrets.DATABASE_URL }}"
+      expected_patterns:
+        - '"functions"'
+        - '"runtime"'
+        - '"memory"'
+        - '"maxDuration"'
+
+    - name: "monorepo_nextjs"
+      description: "Vercel config for Next.js monorepo"
+      input:
+        deployment_type: monorepo
+        framework: nextjs
+        regions:
+          - iad1
+          - sfo1
+        environment_variables:
+          NODE_ENV: production
+      expected_patterns:
+        - '"version": 2'
+        - '"projects"'
+        - '"regions"'
+
+  railway_config:
+    - name: "docker_deployment"
+      description: "Railway config for Docker deployment"
+      input:
+        deployment_type: docker
+        dockerfile_path: Dockerfile
+        docker_context: .
+        port: 8080
+        num_replicas: 2
+        healthcheck_path: /health
+        environment_variables:
+          NODE_ENV: production
+          PORT: 8080
+        secret_variables:
+          - DATABASE_URL
+          - API_KEY
+        memory_limit: 512
+        cpu: 1
+      expected_patterns:
+        - '[build]'
+        - 'builder = "dockerfile"'
+        - '[healthcheck]'
+        - 'path = "/health"'
+
+    - name: "nixpacks_python"
+      description: "Railway config for Nixpacks Python app"
+      input:
+        deployment_type: nixpacks
+        language: python
+        build_command: pip install -r requirements.txt
+        start_command: gunicorn app:app
+        port: 8000
+        healthcheck_path: /health
+        healthcheck_retries: 5
+        environment_variables:
+          FLASK_ENV: production
+        secret_variables:
+          - SECRET_KEY
+      expected_patterns:
+        - '[build]'
+        - 'builder = "nixpacks"'
+        - 'build_command'
+
+    - name: "monorepo_services"
+      description: "Railway config for monorepo with multiple services"
+      input:
+        deployment_type: monorepo
+        services:
+          - name: api
+            path: ./services/api
+            deployment_type: docker
+            port: 4000
+          - name: worker
+            path: ./services/worker
+            deployment_type: nixpacks
+            language: nodejs
+            port: 4001
+      expected_patterns:
+        - '[build]'
+        - '[deploy]'
+        - 'num_replicas'

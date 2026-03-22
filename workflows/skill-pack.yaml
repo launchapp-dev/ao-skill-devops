@@ -322,6 +322,36 @@ phases:
         default: moderate
         description: Validation strictness level
 
+  testing-infrastructure-generate:
+    mode: agent
+    agent: testing-infrastructure-agent
+    directive: "Generate comprehensive testing infrastructure for DevOps config generators. Creates pytest-based test suites with unit tests, schema validation tests, output correctness tests, mock file system operations, and CI integration with 80%+ coverage threshold."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      test_target:
+        type: string
+        enum: [dockerfile, github-actions, k8s-manifest, vercel-config, railway-config, all]
+        description: Generator to create tests for
+        required: true
+      test_types:
+        type: array
+        description: Types of tests to generate
+        default: [unit, schema_validation, output_correctness]
+      coverage_threshold:
+        type: number
+        default: 80
+        description: Minimum coverage percentage required
+      mock_mode:
+        type: boolean
+        default: true
+        description: Use mock file system operations
+      ci_template:
+        type: string
+        enum: [github-actions, gitlab-ci, none]
+        default: github-actions
+        description: CI platform for test execution
+
 workflows:
   - id: ao.devops/standard
     name: "ao-skill-devops Standard"
@@ -400,6 +430,16 @@ workflows:
     description: "Generate production-ready multi-stage Dockerfiles with optimized layer caching, health checks, and security best practices"
     phases:
       - dockerfile-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/testing-infrastructure
+    name: "Testing Infrastructure Generator"
+    description: "Generate comprehensive testing infrastructure for DevOps config generators. Creates pytest-based test suites with unit tests, schema validation tests, output correctness tests, mock file system operations, and CI integration with 80%+ coverage threshold."
+    phases:
+      - testing-infrastructure-generate
       - integration-test
       - push-branch
       - create-pr
