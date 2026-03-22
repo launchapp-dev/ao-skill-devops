@@ -6,6 +6,125 @@ phases:
     capabilities:
       mutates_state: true
 
+  vercel-config-generate:
+    mode: agent
+    agent: vercel-config-agent
+    directive: "Generate Vercel deployment configuration (vercel.json) based on the input specification. Creates configs for static sites, serverless functions, edge functions, and monorepos."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      deployment_type:
+        type: string
+        enum: [static, serverless, edge, monorepo, framework]
+        description: Type of Vercel deployment
+      framework:
+        type: string
+        enum: [nextjs, nuxt, sveltekit, astro, remix, expo, nodejs, other]
+        default: other
+        description: Target framework for auto-configuration
+      build_command:
+        type: string
+        description: Build command to execute
+      output_directory:
+        type: string
+        description: Directory containing built files
+      install_command:
+        type: string
+        description: Install command for dependencies
+      regions:
+        type: array
+        items:
+          type: string
+        description: Deployment regions
+      environment_variables:
+        type: object
+        description: Static environment variables
+      secret_environment_variables:
+        type: array
+        items:
+          type: string
+        description: Secret environment variable names (use ${{ secrets.VAR }})
+      routes:
+        type: array
+        description: Route configurations (headers, redirects, rewrites)
+      functions:
+        type: object
+        description: Serverless function configurations
+
+  railway-config-generate:
+    mode: agent
+    agent: railway-config-agent
+    directive: "Generate Railway deployment configuration (railway.toml) based on the input specification. Creates configs for Docker containers, Nixpacks builds, and monorepo services."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      deployment_type:
+        type: string
+        enum: [docker, nixpacks, buildpack, monorepo, static]
+        description: Type of Railway deployment
+      language:
+        type: string
+        enum: [nodejs, python, go, rust, deno, bun, java, ruby, php, other]
+        default: other
+        description: Target language/runtime
+      dockerfile_path:
+        type: string
+        default: Dockerfile
+        description: Path to Dockerfile for Docker deployments
+      docker_context:
+        type: string
+        default: .
+        description: Docker build context
+      build_command:
+        type: string
+        description: Override build command
+      start_command:
+        type: string
+        description: Override start command
+      port:
+        type: integer
+        default: 3000
+        description: Container port to expose
+      num_replicas:
+        type: integer
+        default: 1
+        description: Number of replicas
+      healthcheck_path:
+        type: string
+        description: HTTP path for health checks
+      healthcheck_interval:
+        type: integer
+        default: 30
+        description: Health check interval in seconds
+      healthcheck_timeout:
+        type: integer
+        default: 5
+        description: Health check timeout in seconds
+      healthcheck_retries:
+        type: integer
+        default: 3
+        description: Health check retry count
+      environment_variables:
+        type: object
+        description: Static environment variables
+      secret_variables:
+        type: array
+        items:
+          type: string
+        description: Secret variable names (use ${{ secrets.VAR }})
+      memory_limit:
+        type: integer
+        description: Memory limit in MB
+      cpu:
+        type: number
+        description: CPU count
+      services:
+        type: array
+        description: Service definitions for monorepo deployments
+      nixpacks_config:
+        type: string
+        description: Path to nixpacks.toml config file
+
   agent-base-framework-generate:
     mode: agent
     agent: agent-base-framework-agent
@@ -121,6 +240,26 @@ workflows:
     description: "Plan → Implement → Integration Test → Push → PR"
     phases:
       - ao.devops-implement
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/vercel-config
+    name: "Vercel Config Generator"
+    description: "Generate Vercel deployment configurations (vercel.json) for static sites, serverless functions, edge functions, and monorepos"
+    phases:
+      - vercel-config-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/railway-config
+    name: "Railway Config Generator"
+    description: "Generate Railway deployment configurations (railway.toml) for Docker containers, Nixpacks builds, and monorepo services"
+    phases:
+      - railway-config-generate
       - integration-test
       - push-branch
       - create-pr
