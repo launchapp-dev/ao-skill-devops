@@ -13,6 +13,42 @@ phases:
     capabilities:
       mutates_state: false
 
+  git-branch-cleanup:
+    mode: agent
+    agent: git-branch-cleanup-agent
+    directive: "Clean up stale git branches from merged/closed PRs. Analyzes local and remote branches against main branch, identifies merged branches using git branch --merged, and safely deletes them with dry-run preview. Handles multiple remotes including origin and pr remotes."
+    capabilities:
+      mutates_state: true
+    input_schema:
+      dry_run:
+        type: boolean
+        default: true
+        description: Preview what will be deleted without making changes
+      delete_local:
+        type: boolean
+        default: true
+        description: Delete merged local branches
+      delete_remote:
+        type: boolean
+        default: true
+        description: Delete merged remote branches
+      remote_names:
+        type: array
+        items:
+          type: string
+        default: ["origin"]
+        description: Remote names to clean up
+      main_branch:
+        type: string
+        default: "main"
+        description: Main branch to compare against for merged status
+      skip_patterns:
+        type: array
+        items:
+          type: string
+        default: []
+        description: Branch name patterns to skip (protected branches)
+
   vercel-config-generate:
     mode: agent
     agent: vercel-config-agent
@@ -919,3 +955,9 @@ workflows:
     description: "GitHub Actions CI workflow that validates all generated DevOps configs in the skill pack. Runs schema validation, security checks, test coverage, and TypeScript/YAML linting. Triggers on PR and push events."
     phases:
       - self-validate
+
+  - id: ao.devops/git-branch-cleanup
+    name: "Git Branch Cleanup"
+    description: "Clean up stale git branches from merged/closed PRs. Analyzes local and remote branches against main branch, identifies merged branches using git branch --merged, and safely deletes them with dry-run preview. Supports multiple remotes."
+    phases:
+      - git-branch-cleanup

@@ -35,6 +35,7 @@ exports = [
   "ao.devops/cli-generator",
   "ao.devops/cli-generator-full",
   "ao.devops/self-validation",
+  "ao.devops/git-branch-cleanup",
 ]
 
 [skills]
@@ -54,6 +55,7 @@ exports = [
   "ao.devops/env-example-generator",
   "ao.devops/cli-generator-interface",
   "ao.devops/self-validation",
+  "ao.devops/git-branch-cleanup",
 ]
 
 [runtime]
