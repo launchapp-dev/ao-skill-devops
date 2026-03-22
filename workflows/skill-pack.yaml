@@ -1,0 +1,25 @@
+phases:
+  ao.devops-implement:
+    mode: agent
+    agent: ao.devops-agent
+    directive: "Implement the task. Read requirements, write code, commit."
+    capabilities:
+      mutates_state: true
+
+workflows:
+  - id: ao.devops/standard
+    name: "ao-skill-devops Standard"
+    description: "Plan → Implement → Push → PR"
+    phases:
+      - ao.devops-implement
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/quick-fix
+    name: "ao-skill-devops Quick Fix"
+    description: "Implement → Push → PR"
+    phases:
+      - ao.devops-implement
+      - push-branch
+      - create-pr

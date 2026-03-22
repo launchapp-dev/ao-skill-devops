@@ -1,0 +1,28 @@
+schema = "ao.pack.v1"
+id = "ao.devops"
+version = "0.1.0"
+kind = "skill-pack"
+title = "ao-skill-devops"
+description = "Generate GitHub Actions, Dockerfiles, deployment configs automatically"
+
+[ownership]
+mode = "community"
+author = "launchapp-dev"
+repo = "https://github.com/launchapp-dev/ao-skill-devops"
+
+[compatibility]
+ao_core = ">=0.2.0"
+workflow_schema = "v2"
+
+[workflows]
+root = "workflows"
+exports = [
+  "ao.devops/standard",
+  "ao.devops/quick-fix",
+]
+
+[runtime]
+agent_overlay = "runtime/agents.yaml"
+
+[permissions]
+tools = ["ao", "github"]
