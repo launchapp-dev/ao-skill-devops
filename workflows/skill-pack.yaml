@@ -6,6 +6,26 @@ phases:
     capabilities:
       mutates_state: true
 
+  agent-base-framework-generate:
+    mode: agent
+    agent: agent-base-framework-agent
+    directive: "Generate base classes and utilities for DevOps config generators. Creates Agent base class, PromptBuilder, TemplateRenderer, and validation helpers."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      component_type:
+        type: string
+        enum: [agent_base, prompt_builder, template_renderer, validation_helpers, all]
+        description: Type of framework component to generate
+      target_language:
+        type: string
+        enum: [typescript, python, bash, all]
+        default: typescript
+        description: Target implementation language
+      options:
+        type: object
+        description: Additional framework configuration options
+
   k8s-manifest-generate:
     mode: agent
     agent: k8s-manifest-agent
@@ -64,6 +84,16 @@ workflows:
     description: "Plan → Implement → Push → PR"
     phases:
       - ao.devops-implement
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/base-framework
+    name: "DevOps Agent Base Framework"
+    description: "Generate base classes and utilities for DevOps config generators"
+    phases:
+      - agent-base-framework-generate
+      - integration-test
       - push-branch
       - create-pr
       - pr-review
