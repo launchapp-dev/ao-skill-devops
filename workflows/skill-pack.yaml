@@ -125,6 +125,86 @@ phases:
         type: string
         description: Path to nixpacks.toml config file
 
+  dockerfile-generate:
+    mode: agent
+    agent: dockerfile-agent
+    directive: "Generate Dockerfile based on the input specification. Creates multi-stage Dockerfiles with optimized layer caching, health checks, and security best practices."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      build_type:
+        type: string
+        enum: [multistage, single-stage, scratch, distroless]
+        default: multistage
+        description: Type of Dockerfile build strategy
+      language:
+        type: string
+        enum: [nodejs, python, go, rust, deno, bun, static, other]
+        default: other
+        description: Target language/runtime for base image selection
+      language_version:
+        type: string
+        description: Specific language version
+      build_command:
+        type: string
+        description: Build command to execute during image build
+      start_command:
+        type: string
+        description: Command to run when container starts
+      output_directory:
+        type: string
+        description: Directory containing build output (for static sites)
+      working_directory:
+        type: string
+        description: Working directory in the container
+      port:
+        type: integer
+        description: Port the application listens on
+        default: 3000
+      base_image:
+        type: string
+        description: Custom base image (overrides language preset)
+      builder_image:
+        type: string
+        description: Builder image for multi-stage builds
+      final_image:
+        type: string
+        description: Final stage base image
+      build_arguments:
+        type: object
+        description: Build arguments (ARG) for the Dockerfile
+      environment_variables:
+        type: object
+        description: Environment variables to set in the image
+      secrets:
+        type: array
+        items:
+          type: string
+        description: Secret names (will use build secret mounts)
+      healthcheck:
+        type: object
+        description: Health check configuration
+      user:
+        type: string
+        description: Non-root user to run as
+      labels:
+        type: object
+        description: Labels to add to the image
+      copy_files:
+        type: array
+        description: Files/directories to copy into the image
+      optimize_cache:
+        type: boolean
+        default: true
+        description: Enable layer caching optimization
+      minimize_layers:
+        type: boolean
+        default: true
+        description: Minimize number of layers in final image
+      options:
+        type: object
+        description: Additional generation options
+
   agent-base-framework-generate:
     mode: agent
     agent: agent-base-framework-agent
@@ -242,3 +322,85 @@ phases:
         default: moderate
         description: Validation strictness level
 
+workflows:
+  - id: ao.devops/standard
+    name: "ao-skill-devops Standard"
+    description: "Plan → Implement → Push → PR"
+    phases:
+      - ao.devops-implement
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/base-framework
+    name: "DevOps Agent Base Framework"
+    description: "Generate base classes and utilities for DevOps config generators"
+    phases:
+      - agent-base-framework-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/quick-fix
+    name: "ao-skill-devops Quick Fix"
+    description: "Implement → Push → PR"
+    phases:
+      - ao.devops-implement
+      - push-branch
+      - create-pr
+
+  - id: ao.devops/k8s-manifest
+    name: "Kubernetes Manifest Generator"
+    description: "Generate Kubernetes manifests for deployments, services, ingress, configmaps, secrets, PVCs, Helm charts, and Kustomize overlays"
+    phases:
+      - k8s-manifest-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/standard-with-tests
+    name: "ao-skill-devops Standard with Integration Tests"
+    description: "Plan → Implement → Integration Test → Push → PR"
+    phases:
+      - ao.devops-implement
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/github-actions
+    name: "GitHub Actions Generator"
+    description: "Generate GitHub Actions workflows for CI/CD pipelines. Supports Node.js, Python, and Go with lint/test/build steps, caching, artifacts, and matrix builds."
+    phases:
+      - github-actions-generate
+  - id: ao.devops/vercel-config
+    name: "Vercel Config Generator"
+    description: "Generate Vercel deployment configurations (vercel.json) for static sites, serverless functions, edge functions, and monorepos"
+    phases:
+      - vercel-config-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/railway-config
+    name: "Railway Config Generator"
+    description: "Generate Railway deployment configurations (railway.toml) for Docker containers, Nixpacks builds, and monorepo services"
+    phases:
+      - railway-config-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review
+
+  - id: ao.devops/dockerfile
+    name: "Dockerfile Generator"
+    description: "Generate production-ready multi-stage Dockerfiles with optimized layer caching, health checks, and security best practices"
+    phases:
+      - dockerfile-generate
+      - integration-test
+      - push-branch
+      - create-pr
+      - pr-review

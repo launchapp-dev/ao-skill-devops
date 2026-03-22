@@ -1,0 +1,243 @@
+id: ao.devops/dockerfile-generator
+description: "Generate multi-stage production Dockerfiles with optimized layer caching, build arguments, secrets handling, and health checks. Supports Node.js, Python, Go, Rust, and static site builds."
+version: "0.1.0"
+
+agent: dockerfile-agent
+
+build_types:
+  - multistage
+  - single-stage
+  - scratch
+  - distroless
+
+language_presets:
+  - nodejs
+  - python
+  - go
+  - rust
+  - static
+  - deno
+  - bun
+
+features:
+  - multi_stage_builds
+  - layer_caching
+  - build_arguments
+  - secrets_handling
+  - health_checks
+  - optimize_image_size
+  - non_root_user
+  - scratch_support
+
+input_schema:
+  build_type:
+    type: string
+    enum: [multistage, single-stage, scratch, distroless]
+    default: multistage
+    description: Type of Dockerfile build strategy
+  language:
+    type: string
+    enum: [nodejs, python, go, rust, deno, bun, static, other]
+    default: other
+    description: Target language/runtime for base image selection
+  language_version:
+    type: string
+    description: Specific language version (e.g., "20.x", "3.12", "1.21")
+  build_command:
+    type: string
+    description: Build command to execute during image build
+  start_command:
+    type: string
+    description: Command to run when container starts
+  output_directory:
+    type: string
+    description: Directory containing build output (for static sites)
+  working_directory:
+    type: string
+    description: Working directory in the container
+  port:
+    type: integer
+    description: Port the application listens on
+    default: 3000
+  base_image:
+    type: string
+    description: Custom base image (overrides language preset)
+  builder_image:
+    type: string
+    description: Builder image for multi-stage builds
+  final_image:
+    type: string
+    description: Final stage base image
+  build_arguments:
+    type: object
+    description: Build arguments (ARG) for the Dockerfile
+    additionalProperties:
+      type: string
+  environment_variables:
+    type: object
+    description: Environment variables to set in the image
+    additionalProperties:
+      type: string
+  secrets:
+    type: array
+    items:
+      type: string
+    description: Secret names (will use build secret mounts)
+  healthcheck:
+    type: object
+    description: Health check configuration
+    properties:
+      cmd:
+        type: string
+        description: Health check command
+      interval:
+        type: string
+        description: Check interval (e.g., "30s")
+      timeout:
+        type: string
+        description: Timeout for check (e.g., "5s")
+      retries:
+        type: integer
+        description: Number of retries before failing
+      start_period:
+        type: string
+        description: Grace period before health checks begin
+  user:
+    type: string
+    description: Non-root user to run as (e.g., "node", "app")
+  labels:
+    type: object
+    description: Labels to add to the image
+    additionalProperties:
+      type: string
+  copy_files:
+    type: array
+    description: Files/directories to copy into the image
+    items:
+      type: object
+      properties:
+        src:
+          type: string
+        dest:
+          type: string
+  optimize_cache:
+    type: boolean
+    default: true
+    description: Enable layer caching optimization
+  minimize_layers:
+    type: boolean
+    default: true
+    description: Minimize number of layers in final image
+  options:
+    type: object
+    description: Additional generation options
+
+capabilities:
+  dockerfile_generation: true
+  multistage_support: true
+  layer_optimization: true
+  healthcheck_support: true
+  scratch_support: true
+  distroless_support: true
+  buildkit_support: true
+  secrets_mount_support: true
+
+examples:
+  nodejs_multistage: |
+    input:
+      build_type: multistage
+      language: nodejs
+      language_version: "20.x"
+      build_command: npm run build
+      start_command: npm start
+      port: 3000
+      healthcheck:
+        cmd: "curl -f http://localhost:3000/health || exit 1"
+        interval: 30s
+        timeout: 5s
+        retries: 3
+        start_period: 40s
+      environment_variables:
+        NODE_ENV: production
+      user: node
+
+  python_multistage: |
+    input:
+      build_type: multistage
+      language: python
+      language_version: "3.12"
+      build_command: pip install -r requirements.txt
+      start_command: gunicorn app:app --bind 0.0.0.0:8000
+      port: 8000
+      healthcheck:
+        cmd: "curl -f http://localhost:8000/health || exit 1"
+        interval: 30s
+        timeout: 5s
+        retries: 3
+      environment_variables:
+        FLASK_ENV: production
+      user: app
+
+  go_multistage: |
+    input:
+      build_type: multistage
+      language: go
+      language_version: "1.21"
+      build_command: go build -o main ./cmd/server
+      start_command: ./main
+      port: 8080
+      healthcheck:
+        cmd: "wget -qO- http://localhost:8080/health || exit 1"
+        interval: 30s
+        timeout: 5s
+        retries: 3
+      user: app
+
+  rust_multistage: |
+    input:
+      build_type: multistage
+      language: rust
+      language_version: "1.70"
+      build_command: cargo build --release
+      start_command: /app/server
+      port: 8080
+      environment_variables:
+        RUST_LOG: info
+      healthcheck:
+        cmd: "curl -f http://localhost:8080/health || exit 1"
+        interval: 30s
+        timeout: 5s
+        retries: 3
+
+  static_site: |
+    input:
+      build_type: multistage
+      language: static
+      build_command: npm run build
+      output_directory: dist
+      port: 80
+      healthcheck:
+        cmd: "wget -qO- http://localhost/health || exit 1"
+        interval: 30s
+        timeout: 5s
+        retries: 3
+      user: nginx
+
+  distroless: |
+    input:
+      build_type: distroless
+      language: nodejs
+      language_version: "20"
+      build_command: npm run build
+      start_command: npm start
+      port: 3000
+      builder_image: node:20-alpine
+      final_image: gcr.io/distroless/nodejs20-debian11
+      healthcheck:
+        cmd: "curl -f http://localhost:3000/health || exit 1"
+        interval: 30s
+        timeout: 5s
+        retries: 3
+      environment_variables:
+        NODE_ENV: production
+      user: nonroot
