@@ -1,0 +1,169 @@
+id: ao.devops/git-branch-cleanup
+description: "Clean up stale git branches from merged/closed PRs. Analyzes local and remote branches against the main branch, identifies merged branches using git branch --merged, and safely deletes them with confirmation via dry-run preview."
+version: "0.1.0"
+
+agent: git-branch-cleanup-agent
+
+capabilities:
+  git_analysis: true
+  local_branch_cleanup: true
+  remote_branch_cleanup: true
+  dry_run_preview: true
+  multi_remote_support: true
+  safe_deletion: true
+
+branch_patterns:
+  local_pr_branches:
+    - "pr-*"
+    - "pr-review-*"
+    - "pr-temp-*"
+    - "*-local"
+    - "*local*"
+  remote_branches:
+    - "origin/pr-*"
+    - "origin/merge-pr-*-*"
+    - "pr/*"
+
+remotes:
+  - name: origin
+    delete_command: "git push origin --delete"
+  - name: pr
+    delete_command: "git push pr --delete"
+
+main_branch:
+  - main
+  - master
+
+safety:
+  dry_run_default: true
+  require_confirmation: true
+  skip_protected_branches: true
+  protected_patterns:
+    - "main"
+    - "master"
+    - "develop"
+    - "ao/task-*"
+    - "release/*"
+    - "hotfix/*"
+
+input_schema:
+  dry_run:
+    type: boolean
+    default: true
+    description: Preview what will be deleted without making changes
+  delete_local:
+    type: boolean
+    default: true
+    description: Delete merged local branches
+  delete_remote:
+    type: boolean
+    default: true
+    description: Delete merged remote branches
+  remote_names:
+    type: array
+    items:
+      type: string
+    default: ["origin"]
+    description: Remote names to clean up (use git remote -v to list)
+  main_branch:
+    type: string
+    default: "main"
+    description: Main branch to compare against for merged status
+  skip_patterns:
+    type: array
+    items:
+      type: string
+    default: []
+    description: Branch name patterns to skip (protected branches)
+  include_merged:
+    type: boolean
+    default: true
+    description: Include branches that have been merged into main
+  include_closed:
+    type: boolean
+    default: true
+    description: Include branches that appear to be from closed PRs
+
+output_schema:
+  deleted_branches:
+    type: object
+    properties:
+      local:
+        type: array
+        items:
+          type: string
+        description: List of deleted local branches
+      remote:
+        type: object
+        description: Deleted branches per remote
+        additionalProperties:
+          type: array
+          items:
+            type: string
+  preview_branches:
+    type: object
+    properties:
+      local:
+        type: array
+        items:
+          type: string
+        description: Local branches that would be deleted (dry-run)
+      remote:
+        type: object
+        description: Remote branches that would be deleted (dry-run)
+        additionalProperties:
+          type: array
+          items:
+            type: string
+  errors:
+    type: array
+    items:
+      type: string
+    description: Any errors encountered during cleanup
+  summary:
+    type: object
+    properties:
+      total_local_deleted:
+        type: number
+      total_remote_deleted:
+        type: number
+      execution_time_ms:
+        type: number
+
+examples:
+  dry_run_preview: |
+    input:
+      dry_run: true
+      delete_local: true
+      delete_remote: true
+      remote_names: ["origin"]
+      main_branch: "main"
+    expected_output:
+      preview_branches:
+        local: ["pr-1", "pr-2", "pr-review-1"]
+        remote:
+          origin: ["pr-5", "merge-pr-10-test-fixtures"]
+
+  local_cleanup_only: |
+    input:
+      dry_run: false
+      delete_local: true
+      delete_remote: false
+      main_branch: "main"
+    expected_output:
+      deleted_branches:
+        local: ["pr-1", "pr-2"]
+
+  multi_remote_cleanup: |
+    input:
+      dry_run: true
+      delete_local: true
+      delete_remote: true
+      remote_names: ["origin", "pr"]
+      main_branch: "main"
+    expected_output:
+      preview_branches:
+        local: ["pr-1", "pr-review-1", "pr-temp-1"]
+        remote:
+          origin: ["pr-5"]
+          pr: ["1", "2", "3"]
