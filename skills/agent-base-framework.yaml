@@ -1,0 +1,119 @@
+id: ao.devops/agent-base-framework
+description: "Base classes and utilities for DevOps config generators. Provides Agent base class, PromptBuilder, TemplateRenderer, and validation helpers that form the foundation for all DevOps generator skills."
+version: "0.1.0"
+
+agent: agent-base-framework-agent
+
+capabilities:
+  base_framework: true
+  prompt_building: true
+  template_rendering: true
+  validation_helpers: true
+
+# Core components provided by this framework
+framework_components:
+  agent_base_class:
+    description: "Base class for all DevOps generator agents with common patterns for file generation, validation, and output formatting"
+    features:
+      - file_generation
+      - output_validation
+      - error_handling
+      - logging
+      - schema_validation
+
+  prompt_builder:
+    description: "Utility for building structured prompts from templates and input specifications"
+    features:
+      - template_variable_substitution
+      - context_injection
+      - format_preservation
+      - multi_section_prompts
+
+  template_renderer:
+    description: "Renders configuration templates with variable substitution and validation"
+    features:
+      - jinja2_style_templates
+      - schema_validation
+      - partial_rendering
+      - custom_filters
+
+  validation_helpers:
+    description: "Common validation utilities for generated configs"
+    features:
+      - yaml_validation
+      - json_validation
+      - kubernetes_schema_validation
+      - dockerfile_syntax_validation
+      - github_actions_schema_validation
+
+input_schema:
+  component_type:
+    type: string
+    enum: [agent_base, prompt_builder, template_renderer, validation_helpers, all]
+    description: Type of framework component to initialize
+    required: true
+  target_language:
+    type: string
+    enum: [typescript, python, bash, all]
+    default: typescript
+    description: Target implementation language
+  options:
+    type: object
+    description: Additional framework configuration options
+
+output_schema:
+  generated_code:
+    type: object
+    properties:
+      component_name: string
+      code: string
+      imports: array
+      exports: array
+      tests: string
+
+  validation_results:
+    type: object
+    properties:
+      syntax_valid: boolean
+      schema_compliant: boolean
+      best_practices_check: boolean
+
+examples:
+  agent_base_class: |
+    input:
+      component_type: agent_base
+      target_language: typescript
+      options:
+        include_validation: true
+        include_logging: true
+
+  prompt_builder: |
+    input:
+      component_type: prompt_builder
+      target_language: typescript
+      options:
+        template_engine: jinja2
+        include_context: true
+
+  template_renderer: |
+    input:
+      component_type: template_renderer
+      target_language: python
+      options:
+        filters:
+          - k8s_name
+          - docker_tag
+        partials: true
+
+  validation_helpers: |
+    input:
+      component_type: validation_helpers
+      target_language: typescript
+      options:
+        schemas:
+          - kubernetes
+          - dockerfile
+          - github_actions
+
+dependencies:
+  - ao.devops/agent-base-framework
