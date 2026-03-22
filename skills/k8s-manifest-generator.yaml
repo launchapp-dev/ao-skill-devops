@@ -1,0 +1,79 @@
+id: ao.devops/k8s-manifest-generator
+description: "Generate Kubernetes manifests for deployments, services, ingress, configmaps, secrets, and persistent volume claims. Supports Helm charts and Kustomize overlays."
+version: "0.1.0"
+
+agent: k8s-manifest-agent
+
+manifest_types:
+  - deployment
+  - service
+  - ingress
+  - configmap
+  - secret
+  - pvc
+  - helm
+  - kustomize
+
+input_schema:
+  manifest_type:
+    type: string
+    enum: [deployment, service, ingress, configmap, secret, pvc, helm, kustomize]
+    description: Type of Kubernetes resource to generate
+    required: true
+  name:
+    type: string
+    description: Resource name
+    required: true
+  namespace:
+    type: string
+    default: default
+    description: Target namespace
+  spec:
+    type: object
+    description: Resource-specific specification
+  options:
+    type: object
+    description: Additional generation options
+
+capabilities:
+  k8s_generation: true
+  helm_support: true
+  kustomize_support: true
+
+examples:
+  deployment: |
+    input:
+      manifest_type: deployment
+      name: my-app
+      namespace: production
+      replicas: 3
+      image: myregistry/myapp:v1.2.3
+      ports:
+        - name: http
+          containerPort: 8080
+          servicePort: 80
+
+  helm: |
+    input:
+      manifest_type: helm
+      chart_name: my-chart
+      values:
+        replicaCount: 2
+        image:
+          repository: myapp
+          tag: latest
+        service:
+          type: ClusterIP
+          port: 80
+
+  kustomize: |
+    input:
+      manifest_type: kustomize
+      base_chart: ./base
+      overlays:
+        - name: dev
+          replicas: 1
+          image_tag: dev
+        - name: prod
+          replicas: 5
+          image_tag: stable

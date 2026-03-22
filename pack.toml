@@ -3,7 +3,7 @@ id = "ao.devops"
 version = "0.1.0"
 kind = "skill-pack"
 title = "ao-skill-devops"
-description = "Generate GitHub Actions, Dockerfiles, deployment configs automatically"
+description = "Generate GitHub Actions, Dockerfiles, Kubernetes manifests, and deployment configs automatically"
 
 [ownership]
 mode = "community"
@@ -19,6 +19,12 @@ root = "workflows"
 exports = [
   "ao.devops/standard",
   "ao.devops/quick-fix",
+  "ao.devops/k8s-manifest",
+]
+
+[skills]
+exports = [
+  "ao.devops/k8s-manifest-generator",
 ]
 
 [runtime]

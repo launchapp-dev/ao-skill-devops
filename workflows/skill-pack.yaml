@@ -6,6 +6,31 @@ phases:
     capabilities:
       mutates_state: true
 
+  k8s-manifest-generate:
+    mode: agent
+    agent: k8s-manifest-agent
+    directive: "Generate Kubernetes manifests based on input specification. Create deployment, service, ingress, configmap, secret, or PVC manifests as requested."
+    capabilities:
+      mutates_state: false
+    input_schema:
+      manifest_type:
+        type: string
+        enum: [deployment, service, ingress, configmap, secret, pvc, helm, kustomize]
+        description: Type of Kubernetes resource to generate
+      name:
+        type: string
+        description: Resource name
+      namespace:
+        type: string
+        default: default
+        description: Target namespace
+      spec:
+        type: object
+        description: Resource-specific specification
+      options:
+        type: object
+        description: Additional generation options
+
 workflows:
   - id: ao.devops/standard
     name: "ao-skill-devops Standard"
@@ -23,3 +48,12 @@ workflows:
       - ao.devops-implement
       - push-branch
       - create-pr
+
+  - id: ao.devops/k8s-manifest
+    name: "Kubernetes Manifest Generator"
+    description: "Generate Kubernetes manifests for deployments, services, ingress, configmaps, secrets, PVCs, Helm charts, and Kustomize overlays"
+    phases:
+      - k8s-manifest-generate
+      - push-branch
+      - create-pr
+      - pr-review
