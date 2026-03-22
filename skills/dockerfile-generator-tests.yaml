@@ -1,0 +1,1412 @@
+id: ao.devops/dockerfile-generator-tests
+description: "Unit tests for Dockerfile generator. Validates multi-stage Dockerfile generation, layer caching optimization, health check configuration, non-root user setup, build arguments, environment variables, and base image selection for each language."
+version: "0.1.0"
+
+agent: dockerfile-test-agent
+
+capabilities:
+  dockerfile_validation: true
+  multistage_tests: true
+  layer_optimization_tests: true
+  healthcheck_tests: true
+  non_root_user_tests: true
+  build_args_tests: true
+  env_vars_tests: true
+  base_image_tests: true
+  syntax_validation: true
+
+test_categories:
+  multistage_builds:
+    description: "Test multi-stage Dockerfile generation for all build types"
+    test_cases:
+      - id: multistage-nodejs
+        name: "Multi-stage Node.js Dockerfile"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          build_command: npm run build
+          start_command: npm start
+          port: 3000
+          healthcheck:
+            cmd: "curl -f http://localhost:3000/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 40s
+          environment_variables:
+            NODE_ENV: production
+          user: node
+        expected:
+          has_builder_stage: true
+          has_final_stage: true
+          uses_alpine_base: true
+          optimize_cache: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+          - type: instruction_present
+            instruction: COPY
+            count: 2
+          - type: instruction_present
+            instruction: RUN
+            count: 2
+          - type: instruction_present
+            instruction: WORKDIR
+          - type: instruction_present
+            instruction: EXPOSE
+          - type: instruction_present
+            instruction: HEALTHCHECK
+          - type: instruction_present
+            instruction: USER
+
+      - id: multistage-python
+        name: "Multi-stage Python Dockerfile"
+        input:
+          build_type: multistage
+          language: python
+          language_version: "3.12"
+          build_command: pip install -r requirements.txt
+          start_command: gunicorn app:app --bind 0.0.0.0:8000
+          port: 8000
+          healthcheck:
+            cmd: "curl -f http://localhost:8000/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+          environment_variables:
+            FLASK_ENV: production
+          user: app
+        expected:
+          has_builder_stage: true
+          uses_slim_base: true
+          optimize_cache: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+          - type: instruction_present
+            instruction: EXPOSE
+            value: "8000"
+          - type: instruction_present
+            instruction: USER
+          - type: instruction_present
+            instruction: HEALTHCHECK
+
+      - id: multistage-go
+        name: "Multi-stage Go Dockerfile"
+        input:
+          build_type: multistage
+          language: go
+          language_version: "1.21"
+          build_command: go build -o main ./cmd/server
+          start_command: ./main
+          port: 8080
+          healthcheck:
+            cmd: "wget -qO- http://localhost:8080/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+          user: app
+        expected:
+          has_builder_stage: true
+          uses_alpine_builder: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+          - type: instruction_present
+            instruction: WORKDIR
+          - type: instruction_present
+            instruction: EXPOSE
+            value: "8080"
+
+      - id: multistage-rust
+        name: "Multi-stage Rust Dockerfile"
+        input:
+          build_type: multistage
+          language: rust
+          language_version: "1.70"
+          build_command: cargo build --release
+          start_command: /app/server
+          port: 8080
+          environment_variables:
+            RUST_LOG: info
+          healthcheck:
+            cmd: "curl -f http://localhost:8080/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        expected:
+          has_builder_stage: true
+          optimize_cache: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+          - type: instruction_present
+            instruction: ENV
+          - type: instruction_present
+            instruction: USER
+
+      - id: multistage-deno
+        name: "Multi-stage Deno Dockerfile"
+        input:
+          build_type: multistage
+          language: deno
+          language_version: "1.37"
+          start_command: deno run --allow-net server.ts
+          port: 8000
+          healthcheck:
+            cmd: "curl -f http://localhost:8000/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        expected:
+          has_builder_stage: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+          - type: instruction_present
+            instruction: EXPOSE
+            value: "8000"
+
+      - id: multistage-bun
+        name: "Multi-stage Bun Dockerfile"
+        input:
+          build_type: multistage
+          language: bun
+          language_version: "1"
+          build_command: bun run build
+          start_command: bun start
+          port: 3000
+          healthcheck:
+            cmd: "curl -f http://localhost:3000/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+          environment_variables:
+            NODE_ENV: production
+        expected:
+          has_builder_stage: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+          - type: instruction_present
+            instruction: EXPOSE
+            value: "3000"
+
+  single_stage_builds:
+    description: "Test single-stage Dockerfile generation"
+    test_cases:
+      - id: single-stage-nodejs
+        name: "Single-stage Node.js Dockerfile"
+        input:
+          build_type: single-stage
+          language: nodejs
+          language_version: "20"
+          start_command: npm start
+          port: 3000
+        expected:
+          has_single_from: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 1
+          - type: instruction_present
+            instruction: EXPOSE
+            value: "3000"
+
+      - id: single-stage-python
+        name: "Single-stage Python Dockerfile"
+        input:
+          build_type: single-stage
+          language: python
+          language_version: "3.12"
+          start_command: python app.py
+          port: 8000
+        expected:
+          has_single_from: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 1
+
+  distroless_builds:
+    description: "Test distroless Dockerfile generation"
+    test_cases:
+      - id: distroless-nodejs
+        name: "Distroless Node.js Dockerfile"
+        input:
+          build_type: distroless
+          language: nodejs
+          language_version: "20"
+          build_command: npm run build
+          start_command: npm start
+          port: 3000
+          builder_image: node:20-alpine
+          final_image: gcr.io/distroless/nodejs20-debian11
+          healthcheck:
+            cmd: "curl -f http://localhost:3000/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+          environment_variables:
+            NODE_ENV: production
+          user: nonroot
+        expected:
+          uses_distroless_final: true
+          uses_custom_builder: true
+          optimize_cache: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+          - type: instruction_contains
+            instruction: FROM
+            value: "distroless"
+          - type: instruction_present
+            instruction: USER
+            value: "nonroot"
+
+      - id: distroless-go
+        name: "Distroless Go Dockerfile"
+        input:
+          build_type: distroless
+          language: go
+          language_version: "1.21"
+          build_command: go build -ldflags '-w -s' -o /bin/app ./cmd
+          start_command: /bin/app
+          port: 8080
+          builder_image: golang:1.21-alpine
+          final_image: gcr.io/distroless/static-debian12
+          user: nonroot
+        expected:
+          uses_distroless_static: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+
+  scratch_builds:
+    description: "Test scratch Dockerfile generation"
+    test_cases:
+      - id: scratch-go
+        name: "Scratch Go Dockerfile"
+        input:
+          build_type: scratch
+          language: go
+          language_version: "1.21"
+          build_command: go build -ldflags '-w -s' -o /bin/app ./cmd
+          start_command: /bin/app
+          port: 8080
+        expected:
+          uses_scratch_base: true
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "scratch"
+          - type: instruction_present
+            instruction: COPY
+          - type: instruction_present
+            instruction: EXPOSE
+            value: "8080"
+          - type: instruction_present
+            instruction: CMD
+
+  layer_caching:
+    description: "Test layer caching optimization"
+    test_cases:
+      - id: cache-node-dependencies
+        name: "Node.js dependencies cached"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          build_command: npm run build
+          start_command: npm start
+          port: 3000
+          optimize_cache: true
+        expected:
+          dependencies_copied_first: true
+          source_copied_last: true
+        validation:
+          - type: cache_order
+            first: ["package.json", "package-lock.json"]
+            last: [".", "src", "app"]
+
+      - id: cache-python-dependencies
+        name: "Python dependencies cached"
+        input:
+          build_type: multistage
+          language: python
+          language_version: "3.12"
+          build_command: pip install -r requirements.txt
+          start_command: gunicorn app:app --bind 0.0.0.0:8000
+          port: 8000
+          optimize_cache: true
+        expected:
+          dependencies_copied_first: true
+          source_copied_last: true
+        validation:
+          - type: cache_order
+            first: ["requirements.txt", "requirements-dev.txt"]
+            last: [".", "src", "app"]
+
+      - id: cache-go-modules
+        name: "Go modules cached"
+        input:
+          build_type: multistage
+          language: go
+          language_version: "1.21"
+          build_command: go build -o main ./cmd/server
+          start_command: ./main
+          port: 8080
+          optimize_cache: true
+        expected:
+          modules_copied_first: true
+          source_copied_last: true
+        validation:
+          - type: cache_order
+            first: ["go.mod", "go.sum"]
+            last: [".", "cmd", "internal"]
+
+      - id: cache-minimize-layers
+        name: "Minimize layer count"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          build_command: npm run build
+          start_command: npm start
+          port: 3000
+          minimize_layers: true
+        expected:
+          minimal_layers: true
+        validation:
+          - type: layer_count
+            max: 10
+
+  health_checks:
+    description: "Test health check configuration"
+    test_cases:
+      - id: healthcheck-http-curl
+        name: "HTTP health check with curl"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          healthcheck:
+            cmd: "curl -f http://localhost:3000/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 40s
+        expected:
+          has_healthcheck: true
+          healthcheck_type: http
+        validation:
+          - type: instruction_present
+            instruction: HEALTHCHECK
+          - type: healthcheck_option
+            option: --interval
+            value: "30s"
+          - type: healthcheck_option
+            option: --timeout
+            value: "5s"
+          - type: healthcheck_option
+            option: --retries
+            value: "3"
+          - type: healthcheck_option
+            option: --start-period
+            value: "40s"
+
+      - id: healthcheck-http-wget
+        name: "HTTP health check with wget"
+        input:
+          build_type: multistage
+          language: go
+          language_version: "1.21"
+          start_command: ./main
+          port: 8080
+          healthcheck:
+            cmd: "wget -qO- http://localhost:8080/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        expected:
+          has_healthcheck: true
+          uses_wget: true
+        validation:
+          - type: instruction_present
+            instruction: HEALTHCHECK
+          - type: instruction_contains
+            instruction: HEALTHCHECK
+            value: "wget"
+
+      - id: healthcheck-tcp
+        name: "TCP health check"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 5432
+          healthcheck:
+            cmd: "nc -z localhost 5432 || exit 1"
+            interval: 15s
+            timeout: 5s
+            retries: 3
+        expected:
+          has_healthcheck: true
+          uses_netcat: true
+        validation:
+          - type: instruction_present
+            instruction: HEALTHCHECK
+          - type: instruction_contains
+            instruction: HEALTHCHECK
+            value: "nc"
+
+      - id: healthcheck-disabled
+        name: "Health check disabled"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          healthcheck: null
+        expected:
+          has_healthcheck: false
+        validation:
+          - type: instruction_absent
+            instruction: HEALTHCHECK
+
+      - id: healthcheck-defaults
+        name: "Default health check parameters"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          healthcheck:
+            cmd: "curl -f http://localhost:3000/health || exit 1"
+        expected:
+          has_healthcheck: true
+          uses_defaults: true
+        validation:
+          - type: instruction_present
+            instruction: HEALTHCHECK
+
+  non_root_users:
+    description: "Test non-root user configuration"
+    test_cases:
+      - id: nonroot-nodejs
+        name: "Node.js with node user"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          user: node
+        expected:
+          runs_as_nonroot: true
+          user_created: true
+        validation:
+          - type: instruction_present
+            instruction: USER
+            value: "node"
+          - type: instruction_order
+            user_after_workdir: true
+
+      - id: nonroot-python
+        name: "Python with app user"
+        input:
+          build_type: multistage
+          language: python
+          language_version: "3.12"
+          start_command: gunicorn app:app --bind 0.0.0.0:8000
+          port: 8000
+          user: app
+        expected:
+          runs_as_nonroot: true
+          user_created: true
+        validation:
+          - type: instruction_present
+            instruction: USER
+            value: "app"
+          - type: instruction_order
+            user_after_chown: true
+
+      - id: nonroot-go
+        name: "Go with app user"
+        input:
+          build_type: multistage
+          language: go
+          language_version: "1.21"
+          start_command: ./main
+          port: 8080
+          user: app
+        expected:
+          runs_as_nonroot: true
+        validation:
+          - type: instruction_present
+            instruction: USER
+            value: "app"
+
+      - id: nonroot-create-group
+        name: "Create group and user"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          user: appuser
+        expected:
+          creates_group: true
+          creates_user: true
+        validation:
+          - type: instruction_present
+            instruction: RUN
+            value: "groupadd"
+          - type: instruction_present
+            instruction: RUN
+            value: "useradd"
+
+      - id: nonroot-ownership
+        name: "Set file ownership"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          user: appuser
+        expected:
+          sets_ownership: true
+        validation:
+          - type: instruction_present
+            instruction: RUN
+            value: "chown"
+          - type: instruction_present
+            instruction: RUN
+            value: "chmod"
+
+      - id: nonroot-distroless
+        name: "Distroless nonroot user"
+        input:
+          build_type: distroless
+          language: nodejs
+          language_version: "20"
+          start_command: npm start
+          port: 3000
+          user: nonroot
+        expected:
+          uses_nonroot: true
+        validation:
+          - type: instruction_present
+            instruction: USER
+            value: "nonroot"
+
+  build_arguments:
+    description: "Test build argument handling"
+    test_cases:
+      - id: buildarg-version
+        name: "Build argument for version"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          build_command: npm run build
+          start_command: npm start
+          port: 3000
+          build_arguments:
+            BUILD_DATE: "2024-01-01"
+            SOURCE_COMMIT: "abc123"
+            VERSION: "1.0.0"
+        expected:
+          has_build_args: true
+          arg_count: 3
+        validation:
+          - type: instruction_present
+            instruction: ARG
+            count: 3
+          - type: instruction_contains
+            instruction: LABEL
+            value: "BUILD_DATE"
+          - type: instruction_contains
+            instruction: LABEL
+            value: "VERSION"
+
+      - id: buildarg-default-value
+        name: "Build argument with default value"
+        input:
+          build_type: multistage
+          language: python
+          language_version: "3.12"
+          start_command: python app.py
+          port: 8000
+          build_arguments:
+            PYTHON_VERSION: "3.12"
+            ENVIRONMENT: production
+        expected:
+          has_build_args: true
+        validation:
+          - type: instruction_present
+            instruction: ARG
+          - type: instruction_contains
+            instruction: ARG
+            value: "PYTHON_VERSION"
+
+      - id: buildarg-labels
+        name: "Build args used in labels"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          build_arguments:
+            BUILD_DATE: "2024-01-01"
+            SOURCE_COMMIT: "abc123"
+          labels:
+            org.opencontainers.image.source: "https://github.com/example/repo"
+        expected:
+          uses_arg_in_label: true
+        validation:
+          - type: instruction_present
+            instruction: LABEL
+
+      - id: buildarg-no-args
+        name: "No build arguments"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+        expected:
+          has_build_args: false
+        validation:
+          - type: instruction_absent
+            instruction: ARG
+
+  environment_variables:
+    description: "Test environment variable injection"
+    test_cases:
+      - id: env-basic
+        name: "Basic environment variables"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          environment_variables:
+            NODE_ENV: production
+            PORT: "3000"
+        expected:
+          has_env_vars: true
+          env_count: 2
+        validation:
+          - type: instruction_present
+            instruction: ENV
+            count: 2
+          - type: instruction_contains
+            instruction: ENV
+            value: "NODE_ENV=production"
+
+      - id: env-multiple
+        name: "Multiple environment variables"
+        input:
+          build_type: multistage
+          language: python
+          language_version: "3.12"
+          start_command: gunicorn app:app --bind 0.0.0.0:8000
+          port: 8000
+          environment_variables:
+            FLASK_ENV: production
+            DATABASE_URL: postgres://localhost:5432/db
+            REDIS_URL: redis://localhost:6379
+            LOG_LEVEL: info
+        expected:
+          has_env_vars: true
+          env_count: 4
+        validation:
+          - type: instruction_present
+            instruction: ENV
+            count: 4
+
+      - id: env-production
+        name: "Production environment"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          environment_variables:
+            NODE_ENV: production
+            NEXT_PUBLIC_API_URL: "https://api.example.com"
+            NEXT_TELEMETRY_DISABLED: "1"
+        expected:
+          sets_node_env: true
+          production_mode: true
+        validation:
+          - type: instruction_contains
+            instruction: ENV
+            value: "NODE_ENV=production"
+
+      - id: env-runtime-only
+        name: "Runtime-only environment variables"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          environment_variables:
+            API_SECRET: "runtime-secret"
+        expected:
+          has_env_vars: true
+        validation:
+          - type: instruction_present
+            instruction: ENV
+
+      - id: env-empty
+        name: "No environment variables"
+        input:
+          build_type: multistage
+          language: go
+          language_version: "1.21"
+          start_command: ./main
+          port: 8080
+        expected:
+          has_env_vars: false
+        validation:
+          - type: instruction_absent
+            instruction: ENV
+
+  base_images:
+    description: "Test base image selection for each language"
+    test_cases:
+      - id: base-nodejs-alpine
+        name: "Node.js Alpine base image"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+        expected:
+          builder_image: "node:20-alpine"
+          final_image_contains: "node"
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "node:20-alpine"
+
+      - id: base-nodejs-slim
+        name: "Node.js slim base image"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20"
+          start_command: npm start
+          port: 3000
+          options:
+            base_variant: slim
+        expected:
+          uses_slim: true
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "slim"
+
+      - id: base-python-slim
+        name: "Python slim base image"
+        input:
+          build_type: multistage
+          language: python
+          language_version: "3.12"
+          start_command: python app.py
+          port: 8000
+        expected:
+          builder_image: "python:3.12-slim"
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "python:3.12"
+
+      - id: base-python-alpine
+        name: "Python Alpine base image"
+        input:
+          build_type: multistage
+          language: python
+          language_version: "3.12"
+          start_command: python app.py
+          port: 8000
+          options:
+            base_variant: alpine
+        expected:
+          builder_image: "python:3.12-alpine"
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "python:3.12-alpine"
+
+      - id: base-go-alpine
+        name: "Go Alpine base image"
+        input:
+          build_type: multistage
+          language: go
+          language_version: "1.21"
+          start_command: ./main
+          port: 8080
+        expected:
+          builder_image: "golang:1.21-alpine"
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "golang:1.21"
+
+      - id: base-rust
+        name: "Rust base image"
+        input:
+          build_type: multistage
+          language: rust
+          language_version: "1.70"
+          start_command: /app/server
+          port: 8080
+        expected:
+          builder_image: "rust:1.70"
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "rust:1.70"
+
+      - id: base-static-nginx
+        name: "Static site with Nginx"
+        input:
+          build_type: multistage
+          language: static
+          start_command: nginx -g 'daemon off;'
+          port: 80
+        expected:
+          uses_nginx: true
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "nginx"
+
+      - id: base-deno
+        name: "Deno base image"
+        input:
+          build_type: multistage
+          language: deno
+          language_version: "1.37"
+          start_command: deno run --allow-net server.ts
+          port: 8000
+        expected:
+          builder_image: "deno:1.37"
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "deno:1.37"
+
+      - id: base-bun
+        name: "Bun base image"
+        input:
+          build_type: multistage
+          language: bun
+          language_version: "1"
+          start_command: bun start
+          port: 3000
+        expected:
+          builder_image: "oven/bun:1"
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "oven/bun"
+
+      - id: base-custom
+        name: "Custom base image"
+        input:
+          build_type: multistage
+          language: other
+          base_image: "ubuntu:22.04"
+          start_command: ./start.sh
+          port: 8080
+        expected:
+          uses_custom_base: true
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "ubuntu:22.04"
+
+  static_sites:
+    description: "Test static site Dockerfile generation"
+    test_cases:
+      - id: static-nginx
+        name: "Static site with Nginx"
+        input:
+          build_type: multistage
+          language: static
+          build_command: npm run build
+          output_directory: dist
+          port: 80
+          user: nginx
+          healthcheck:
+            cmd: "wget -qO- http://localhost/health || exit 1"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        expected:
+          uses_nginx: true
+          copies_output: true
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "nginx"
+          - type: instruction_contains
+            instruction: COPY
+            value: "dist"
+          - type: instruction_present
+            instruction: USER
+            value: "nginx"
+
+      - id: static-nginx-alpine
+        name: "Static site with Nginx Alpine"
+        input:
+          build_type: multistage
+          language: static
+          build_command: npm run build
+          output_directory: public
+          port: 80
+        expected:
+          uses_nginx_alpine: true
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "nginx:alpine"
+
+  syntax_validation:
+    description: "Test Dockerfile syntax validation"
+    test_cases:
+      - id: syntax-valid
+        name: "Valid Dockerfile syntax"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+        expected:
+          syntax_valid: true
+        validation:
+          - type: syntax_check
+            must_pass: true
+
+      - id: syntax-instructions
+        name: "All required instructions present"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          healthcheck:
+            cmd: "curl -f http://localhost:3000/health || exit 1"
+          user: node
+        expected:
+          has_all_instructions: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+          - type: instruction_present
+            instruction: WORKDIR
+          - type: instruction_present
+            instruction: COPY
+          - type: instruction_present
+            instruction: RUN
+          - type: instruction_present
+            instruction: EXPOSE
+          - type: instruction_present
+            instruction: CMD
+
+  copy_files:
+    description: "Test file/directory copy operations"
+    test_cases:
+      - id: copy-multiple
+        name: "Copy multiple files"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          copy_files:
+            - src: package.json
+              dest: /app
+            - src: src
+              dest: /app/src
+        expected:
+          copies_multiple: true
+        validation:
+          - type: instruction_present
+            instruction: COPY
+            count: 2
+
+      - id: copy-all
+        name: "Copy all files"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+        expected:
+          copies_all: true
+        validation:
+          - type: instruction_present
+            instruction: COPY
+          - type: instruction_contains
+            instruction: COPY
+            value: "."
+
+  secrets_handling:
+    description: "Test secrets handling (BuildKit)"
+    test_cases:
+      - id: secrets-buildkit
+        name: "BuildKit secrets mount"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          secrets:
+            - npmrc
+            - env_file
+        expected:
+          uses_buildkit: true
+          uses_secrets: true
+        validation:
+          - type: instruction_contains
+            instruction: FROM
+            value: "syntax=docker/dockerfile"
+          - type: instruction_contains
+            instruction: RUN
+            value: "--mount=type=secret"
+
+      - id: secrets-env-vars
+        name: "Secrets as environment variables"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 3000
+          environment_variables:
+            DATABASE_URL: "$DATABASE_URL"
+            API_KEY: "$API_KEY"
+        expected:
+          env_for_secrets: true
+        validation:
+          - type: instruction_present
+            instruction: ENV
+
+  edge_cases:
+    description: "Test edge cases and boundary conditions"
+    test_cases:
+      - id: edge-minimal-input
+        name: "Minimal input (defaults)"
+        input:
+          language: nodejs
+        expected:
+          uses_defaults: true
+        validation:
+          - type: instruction_present
+            instruction: FROM
+
+      - id: edge-custom-port
+        name: "Custom port number"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: npm start
+          port: 9000
+        expected:
+          exposes_custom_port: true
+        validation:
+          - type: instruction_present
+            instruction: EXPOSE
+            value: "9000"
+
+      - id: edge-long-start-command
+        name: "Long start command"
+        input:
+          build_type: multistage
+          language: python
+          language_version: "3.12"
+          start_command: gunicorn app:app --bind 0.0.0.0:8000 --workers 4 --timeout 120 --access-logfile - --error-logfile -
+          port: 8000
+        expected:
+          long_cmd_formatted: true
+        validation:
+          - type: instruction_present
+            instruction: CMD
+          - type: instruction_format
+            instruction: CMD
+            format: exec
+
+      - id: edge-no-build-command
+        name: "No build command (interpreted language)"
+        input:
+          build_type: multistage
+          language: nodejs
+          language_version: "20.x"
+          start_command: node server.js
+          port: 3000
+        expected:
+          no_build_stage: false
+        validation:
+          - type: instruction_present
+            instruction: FROM
+            count: 2
+
+validation_rules:
+  syntax:
+    - "Dockerfile must contain valid Dockerfile instructions"
+    - "FROM instruction must be first"
+    - "Only one CMD instruction allowed (or ENTRYPOINT)"
+    - "EXPOSE port must be valid (1-65535)"
+  build_types:
+    multistage: "Must have exactly 2 FROM instructions"
+    single-stage: "Must have exactly 1 FROM instruction"
+    scratch: "Must use 'scratch' as base image"
+    distroless: "Must use 'distroless' in final stage"
+  instructions:
+    - "WORKDIR should be set before COPY"
+    - "RUN npm/pip should use --only=production for production"
+    - "ENV should come before CMD"
+    - "HEALTHCHECK should use appropriate timeout values"
+    - "USER should be set to non-root user"
+  base_images:
+    nodejs: "Should use node:X-alpine or node:X-slim"
+    python: "Should use python:X.X-slim or python:X.X-alpine"
+    go: "Should use golang:X-alpine"
+    rust: "Should use rust:X or rust:X-alpine"
+    deno: "Should use deno:X"
+    bun: "Should use oven/bun:X"
+    static: "Should use nginx or nginx:alpine"
+
+input_schema:
+  test_type:
+    type: string
+    enum: [multistage_builds, single_stage_builds, distroless_builds, scratch_builds, layer_caching, health_checks, non_root_users, build_arguments, environment_variables, base_images, static_sites, syntax_validation, copy_files, secrets_handling, edge_cases, all]
+    description: Type of Dockerfile test to run
+    required: true
+  generated_dockerfile:
+    type: string
+    description: Raw Dockerfile content to validate
+    required: false
+  validation_level:
+    type: string
+    enum: [strict, moderate, lenient]
+    default: moderate
+    description: Validation strictness level
+
+test_scenarios:
+  nodejs_multistage_full:
+    language: nodejs
+    build_type: multistage
+    language_version: "20.x"
+    build_command: npm run build
+    start_command: npm start
+    port: 3000
+    healthcheck:
+      cmd: "curl -f http://localhost:3000/health || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    environment_variables:
+      NODE_ENV: production
+    user: node
+    optimize_cache: true
+    minimize_layers: true
+
+  python_multistage_full:
+    language: python
+    build_type: multistage
+    language_version: "3.12"
+    build_command: pip install -r requirements.txt
+    start_command: gunicorn app:app --bind 0.0.0.0:8000
+    port: 8000
+    healthcheck:
+      cmd: "curl -f http://localhost:8000/health || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    environment_variables:
+      FLASK_ENV: production
+    user: app
+    optimize_cache: true
+
+  go_multistage_full:
+    language: go
+    build_type: multistage
+    language_version: "1.21"
+    build_command: go build -o main ./cmd/server
+    start_command: ./main
+    port: 8080
+    healthcheck:
+      cmd: "wget -qO- http://localhost:8080/health || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    user: app
+    optimize_cache: true
+
+  rust_multistage_full:
+    language: rust
+    build_type: multistage
+    language_version: "1.70"
+    build_command: cargo build --release
+    start_command: /app/server
+    port: 8080
+    environment_variables:
+      RUST_LOG: info
+    healthcheck:
+      cmd: "curl -f http://localhost:8080/health || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  static_site_nginx:
+    language: static
+    build_type: multistage
+    build_command: npm run build
+    output_directory: dist
+    port: 80
+    healthcheck:
+      cmd: "wget -qO- http://localhost/health || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    user: nginx
+
+  distroless_full:
+    language: nodejs
+    build_type: distroless
+    language_version: "20"
+    build_command: npm run build
+    start_command: npm start
+    port: 3000
+    builder_image: node:20-alpine
+    final_image: gcr.io/distroless/nodejs20-debian11
+    healthcheck:
+      cmd: "curl -f http://localhost:3000/health || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    environment_variables:
+      NODE_ENV: production
+    user: nonroot
+
+  scratch_go:
+    language: go
+    build_type: scratch
+    language_version: "1.21"
+    build_command: go build -ldflags '-w -s' -o /bin/app ./cmd
+    start_command: /bin/app
+    port: 8080
+
+examples:
+  multistage_test: |
+    input:
+      test_type: multistage_builds
+      test_scenario: nodejs_multistage_full
+      validation_level: strict
+
+  healthcheck_test: |
+    input:
+      test_type: health_checks
+      test_scenario: nodejs_multistage_full
+      validation_level: strict
+
+  nonroot_test: |
+    input:
+      test_type: non_root_users
+      test_scenario: nodejs_multistage_full
+      validation_level: strict
+
+  layer_cache_test: |
+    input:
+      test_type: layer_caching
+      test_scenario: python_multistage_full
+      validation_level: strict
+
+  base_image_test: |
+    input:
+      test_type: base_images
+      test_scenario: nodejs_multistage_full
+      validation_level: strict
+
+  full_validation: |
+    input:
+      test_type: all
+      validation_level: moderate
+
+output_schema:
+  test_results:
+    type: object
+    properties:
+      passed: boolean
+      duration_ms: number
+      test_type: string
+      target_file: string
+      errors:
+        type: array
+        items:
+          type: object
+          properties:
+            message: string
+            line: number
+            instruction: string
+            severity: string
+            rule: string
+      warnings:
+        type: array
+        items:
+          type: object
+          properties:
+            message: string
+            line: number
+            severity: string
+            rule: string
+      recommendations:
+        type: array
+        items:
+          type: string
+      validation_details:
+        type: object
+        properties:
+          syntax_valid: boolean
+          multistage_valid: boolean
+          layer_cache_valid: boolean
+          healthcheck_valid: boolean
+          nonroot_valid: boolean
+          env_vars_valid: boolean
+          base_image_valid: boolean
+          instructions_complete: boolean

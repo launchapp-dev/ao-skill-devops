@@ -49,6 +49,7 @@ exports = [
   "ao.devops/railway-config-generator",
   "ao.devops/railway-config-tester",
   "ao.devops/dockerfile-generator",
+  "ao.devops/dockerfile-generator-tests",
   "ao.devops/docker-compose-generator",
   "ao.devops/env-example-generator",
   "ao.devops/cli-generator-interface",
